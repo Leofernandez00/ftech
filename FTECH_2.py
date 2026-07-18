@@ -22,7 +22,7 @@ from PIL import Image, ImageTk
 load_dotenv()
 
 APP_NAME = "FTECH App"
-APP_VERSION = os.getenv("APP_VERSION", "2.0.1").strip()
+APP_VERSION = os.getenv("APP_VERSION", "2.0.2").strip()
 SQL_SERVER = os.getenv("SQL_SERVER", "").strip()
 SQL_DATABASE = os.getenv("SQL_DATABASE", "").strip()
 SQL_USER = os.getenv("SQL_USER", "").strip()
@@ -486,7 +486,7 @@ def create_updater_script(downloaded_file, current_executable):
 
     lines = [
         "@echo off",
-        "setlocal EnableExtensions",
+        "setlocal EnableExtensions EnableDelayedExpansion",
         "title Atualizacao do FTECH",
         f'set "PID={pid}"',
         f'set "NOVO_ARQUIVO={os.path.abspath(downloaded_file)}"',
@@ -497,14 +497,25 @@ def create_updater_script(downloaded_file, current_executable):
         "    timeout /t 1 /nobreak >NUL",
         "    goto AGUARDAR",
         ")",
-        "timeout /t 2 /nobreak >NUL",
+        "rem O PyInstaller --onefile ainda precisa encerrar o bootloader e limpar a pasta _MEI.",
+        "timeout /t 8 /nobreak >NUL",
+        "set /A TENTATIVAS=0",
+        ":SUBSTITUIR",
         'copy /Y "%NOVO_ARQUIVO%" "%ARQUIVO_ATUAL%" >NUL',
         "if errorlevel 1 (",
-        '    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList \"/c copy /Y \\\"%NOVO_ARQUIVO%\\\" \\\"%ARQUIVO_ATUAL%\\\" ^& start \\\"\\\" \\\"%ARQUIVO_ATUAL%\\\"\""',
-        "    exit /b 0",
+        "    set /A TENTATIVAS+=1",
+        "    if !TENTATIVAS! LSS 20 (",
+        "        timeout /t 1 /nobreak >NUL",
+        "        goto SUBSTITUIR",
+        "    )",
+        '    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -Verb RunAs -Wait -ArgumentList \"/c copy /Y \\\"%NOVO_ARQUIVO%\\\" \\\"%ARQUIVO_ATUAL%\\\"\""',
+        "    if errorlevel 1 exit /b 1",
         ")",
+        'if not exist "%ARQUIVO_ATUAL%" exit /b 1',
         'del /F /Q "%NOVO_ARQUIVO%" >NUL 2>&1',
+        "timeout /t 3 /nobreak >NUL",
         'start "" "%ARQUIVO_ATUAL%"',
+        "timeout /t 2 /nobreak >NUL",
         'del /F /Q "%~f0" >NUL 2>&1',
     ]
 
