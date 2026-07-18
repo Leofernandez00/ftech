@@ -562,14 +562,14 @@ class ForcedPasswordChangeDialog:
         tk.Button(
             form,
             text="ALTERAR SENHA E CONTINUAR",
-            font=("Segoe UI", 10, "bold"),
+            font=("Segoe UI", 14, "bold"),
             bg="#33e60b",
             fg="#030303",
             activebackground="#2dcc0a",
             bd=0,
             cursor="hand2",
             command=self.save,
-        ).pack(fill="x", ipady=8)
+        ).pack(fill="x", ipady=15)
 
         self.window.bind("<Return>", lambda _event: self.save())
         self.window.bind("<Escape>", lambda _event: self.cancel())
