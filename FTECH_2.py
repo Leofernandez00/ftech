@@ -23,7 +23,7 @@ from PIL import Image, ImageTk
 load_dotenv()
 
 APP_NAME = "FTECH App"
-APP_VERSION = os.getenv("APP_VERSION", "2.0.8").strip()
+APP_VERSION = os.getenv("APP_VERSION", "2.0.9").strip()
 SQL_SERVER = os.getenv("SQL_SERVER", "").strip()
 SQL_DATABASE = os.getenv("SQL_DATABASE", "").strip()
 SQL_USER = os.getenv("SQL_USER", "").strip()
@@ -498,7 +498,7 @@ class ForcedPasswordChangeDialog:
         self.window.transient(parent)
         self.window.grab_set()
         self.window.protocol("WM_DELETE_WINDOW", self.cancel)
-        center_window(self.window, 470, 330)
+        center_window(self.window, 470, 410)
         self.window.configure(bg="#f4f4f4")
 
         tk.Label(
