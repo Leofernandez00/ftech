@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import json
 import hmac
 import time
 import socket
@@ -22,7 +23,7 @@ from PIL import Image, ImageTk
 load_dotenv()
 
 APP_NAME = "FTECH App"
-APP_VERSION = os.getenv("APP_VERSION", "2.0.6").strip()
+APP_VERSION = os.getenv("APP_VERSION", "2.0.7").strip()
 SQL_SERVER = os.getenv("SQL_SERVER", "").strip()
 SQL_DATABASE = os.getenv("SQL_DATABASE", "").strip()
 SQL_USER = os.getenv("SQL_USER", "").strip()
@@ -47,7 +48,8 @@ ZOOM_JS = r"""
         window.__zoomInstalled = true;
 
         let zoomSalvo = parseFloat(localStorage.getItem('ftech_zoom'));
-        let zoom = Number.isFinite(zoomSalvo) ? zoomSalvo : 1.0;
+        let zoomInicial = __FTECH_INITIAL_ZOOM__;
+        let zoom = Number.isFinite(zoomSalvo) ? zoomSalvo : zoomInicial;
 
         function limitarZoom(valor) {
             return Math.min(Math.max(valor, 0.5), 3.0);
@@ -56,6 +58,9 @@ ZOOM_JS = r"""
             zoom = limitarZoom(zoom);
             document.body.style.zoom = String(zoom);
             localStorage.setItem('ftech_zoom', String(zoom));
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.salvar_zoom(zoom).catch(function () {});
+            }
         }
         applyZoom();
 
@@ -131,7 +136,10 @@ THEME_JS = r"""
         if (window.__ftechThemeInstalled) return;
         window.__ftechThemeInstalled = true;
 
-        let temaEscuro = localStorage.getItem('ftech_tema') === 'escuro';
+        const temaSalvo = localStorage.getItem('ftech_tema');
+        let temaEscuro = temaSalvo === null
+            ? __FTECH_INITIAL_DARK__
+            : temaSalvo === 'escuro';
 
         const style = document.createElement('style');
         style.id = 'ftech-theme-style';
@@ -183,6 +191,11 @@ THEME_JS = r"""
             localStorage.setItem(
                 'ftech_tema', temaEscuro ? 'escuro' : 'claro'
             );
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.salvar_tema(
+                    temaEscuro ? 'escuro' : 'claro'
+                ).catch(function () {});
+            }
         }
 
         button.addEventListener('click', function (event) {
@@ -246,6 +259,55 @@ def get_application_directory():
 
 def get_executable_path():
     return os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__)
+
+
+class PreferenciasWeb:
+    """Salva tema e zoom fora do navegador para persistirem entre execuções."""
+
+    def __init__(self, caminho):
+        self.caminho = caminho
+        self.lock = threading.Lock()
+        self.dados = {"tema": "claro", "zoom": 1.0}
+        self._carregar()
+
+    def _carregar(self):
+        try:
+            with open(self.caminho, "r", encoding="utf-8") as arquivo:
+                dados = json.load(arquivo)
+            if dados.get("tema") in ("claro", "escuro"):
+                self.dados["tema"] = dados["tema"]
+            zoom = float(dados.get("zoom", 1.0))
+            self.dados["zoom"] = min(max(zoom, 0.5), 3.0)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            pass
+
+    def _salvar(self):
+        os.makedirs(os.path.dirname(self.caminho), exist_ok=True)
+        temporario = self.caminho + ".tmp"
+        with open(temporario, "w", encoding="utf-8") as arquivo:
+            json.dump(self.dados, arquivo, ensure_ascii=False, indent=2)
+        os.replace(temporario, self.caminho)
+
+    def salvar_zoom(self, zoom):
+        try:
+            valor = min(max(float(zoom), 0.5), 3.0)
+            with self.lock:
+                self.dados["zoom"] = valor
+                self._salvar()
+            return True
+        except (OSError, ValueError, TypeError):
+            return False
+
+    def salvar_tema(self, tema):
+        if tema not in ("claro", "escuro"):
+            return False
+        try:
+            with self.lock:
+                self.dados["tema"] = tema
+                self._salvar()
+            return True
+        except OSError:
+            return False
 
 
 def get_sql_connection():
@@ -1049,6 +1111,19 @@ def open_appsheet(user):
     profile = os.path.join(base, "FTECH", "webview_profiles", provider, username)
     os.makedirs(profile, exist_ok=True)
 
+    preferencias_path = os.path.join(
+        base, "FTECH", "preferencias", f"{provider}_{username}.json"
+    )
+    preferencias = PreferenciasWeb(preferencias_path)
+
+    zoom_js = ZOOM_JS.replace(
+        "__FTECH_INITIAL_ZOOM__", repr(preferencias.dados["zoom"])
+    )
+    theme_js = THEME_JS.replace(
+        "__FTECH_INITIAL_DARK__",
+        "true" if preferencias.dados["tema"] == "escuro" else "false",
+    )
+
     webview.settings["ALLOW_DOWNLOADS"] = True
 
     window = webview.create_window(
@@ -1061,6 +1136,7 @@ def open_appsheet(user):
         height=800,
         min_size=(900, 600),
         resizable=True,
+        js_api=preferencias,
     )
 
     provider_js = criar_javascript_provedor(provider)
@@ -1073,12 +1149,12 @@ def open_appsheet(user):
             # Zoom nas páginas do AppSheet.
             if "appsheet.com" in current_url:
                 try:
-                    window.evaluate_js(ZOOM_JS)
+                    window.evaluate_js(zoom_js)
                 except Exception as error:
                     print(f"Erro ao instalar zoom: {error}")
 
                 try:
-                    window.evaluate_js(THEME_JS)
+                    window.evaluate_js(theme_js)
                 except Exception as error:
                     print(f"Erro ao instalar seletor de tema: {error}")
 
