@@ -1,0 +1,13 @@
+
+# Publicador FTECH
+.env
+venv/
+.venv/
+build/
+dist/
+__pycache__/
+*.pyc
+*.spec
+webview_profile/
+webview_profiles/
+*.download
