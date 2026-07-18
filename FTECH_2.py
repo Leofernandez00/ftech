@@ -380,7 +380,8 @@ def authenticate_user(username, password):
                 """
                 SELECT ID_USUARIO, USUARIO, NOME_COMPLETO, SENHA_HASH, SENHA_SALT,
                        PROVEDOR_LOGIN, EMAIL_APPSHEET, APPSHEET_URL, ATIVO,
-                       BLOQUEADO, TENTATIVAS_LOGIN
+                       BLOQUEADO, TENTATIVAS_LOGIN,
+                       TROCAR_SENHA_PROXIMO_LOGIN
                 FROM dbo.FTECH_USUARIOS_APP
                 WHERE LOWER(USUARIO) = LOWER(?)
                 """,
@@ -404,6 +405,7 @@ def authenticate_user(username, password):
                 "ativo": bool(row.ATIVO),
                 "bloqueado": bool(row.BLOQUEADO),
                 "tentativas": int(row.TENTATIVAS_LOGIN or 0),
+                "trocar_senha": bool(row.TROCAR_SENHA_PROXIMO_LOGIN),
             }
 
             if not user["ativo"]:
@@ -449,6 +451,195 @@ def authenticate_user(username, password):
 
     except Exception as error:
         return None, f"Não foi possível validar o usuário.\n\nDetalhes: {error}"
+
+
+def change_user_password(user_id, new_password):
+    """Altera a senha interna do FTECH após o primeiro login."""
+    if len(new_password) < 6:
+        raise ValueError("A nova senha deve ter pelo menos 6 caracteres.")
+
+    password_hash, salt = generate_password_hash(new_password)
+
+    with get_sql_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            UPDATE dbo.FTECH_USUARIOS_APP
+            SET SENHA_HASH = ?,
+                SENHA_SALT = ?,
+                TROCAR_SENHA_PROXIMO_LOGIN = 0,
+                TENTATIVAS_LOGIN = 0,
+                BLOQUEADO = 0,
+                DATA_ULTIMA_TROCA_SENHA = SYSDATETIME(),
+                DATA_ALTERACAO = SYSDATETIME()
+            WHERE ID_USUARIO = ?
+            """,
+            password_hash,
+            salt,
+            user_id,
+        )
+
+        if cursor.rowcount == 0:
+            raise RuntimeError("Usuário não encontrado para alteração da senha.")
+
+        connection.commit()
+
+
+class ForcedPasswordChangeDialog:
+    def __init__(self, parent, user, temporary_password):
+        self.parent = parent
+        self.user = user
+        self.temporary_password = temporary_password
+        self.changed = False
+
+        self.window = tk.Toplevel(parent)
+        self.window.title("FTECH | Alteração obrigatória de senha")
+        self.window.resizable(False, False)
+        self.window.transient(parent)
+        self.window.grab_set()
+        self.window.protocol("WM_DELETE_WINDOW", self.cancel)
+        center_window(self.window, 470, 330)
+        self.window.configure(bg="#f4f4f4")
+
+        tk.Label(
+            self.window,
+            text="Crie sua nova senha",
+            font=("Segoe UI", 17, "bold"),
+            bg="#1f4e78",
+            fg="white",
+            pady=18,
+        ).pack(fill="x")
+
+        form = tk.Frame(self.window, bg="#f4f4f4", padx=45, pady=22)
+        form.pack(fill="both", expand=True)
+
+        tk.Label(
+            form,
+            text=(
+                "A senha utilizada é temporária. Para continuar, "
+                "defina uma senha pessoal."
+            ),
+            font=("Segoe UI", 10),
+            bg="#f4f4f4",
+            wraplength=370,
+            justify="left",
+        ).pack(fill="x", pady=(0, 15))
+
+        tk.Label(
+            form,
+            text="Nova senha",
+            font=("Segoe UI", 10, "bold"),
+            bg="#f4f4f4",
+            anchor="w",
+        ).pack(fill="x")
+
+        self.new_password = tk.Entry(
+            form,
+            show="●",
+            font=("Segoe UI", 11),
+            relief="solid",
+            bd=1,
+        )
+        self.new_password.pack(fill="x", ipady=6, pady=(4, 12))
+
+        tk.Label(
+            form,
+            text="Confirmar nova senha",
+            font=("Segoe UI", 10, "bold"),
+            bg="#f4f4f4",
+            anchor="w",
+        ).pack(fill="x")
+
+        self.confirm_password = tk.Entry(
+            form,
+            show="●",
+            font=("Segoe UI", 11),
+            relief="solid",
+            bd=1,
+        )
+        self.confirm_password.pack(fill="x", ipady=6, pady=(4, 17))
+
+        tk.Button(
+            form,
+            text="ALTERAR SENHA E CONTINUAR",
+            font=("Segoe UI", 10, "bold"),
+            bg="#33e60b",
+            fg="#030303",
+            activebackground="#2dcc0a",
+            bd=0,
+            cursor="hand2",
+            command=self.save,
+        ).pack(fill="x", ipady=8)
+
+        self.window.bind("<Return>", lambda _event: self.save())
+        self.window.bind("<Escape>", lambda _event: self.cancel())
+        self.new_password.focus_set()
+
+    def save(self):
+        new_password = self.new_password.get()
+        confirmation = self.confirm_password.get()
+
+        if not new_password or not confirmation:
+            messagebox.showwarning(
+                "Campos obrigatórios",
+                "Informe e confirme a nova senha.",
+                parent=self.window,
+            )
+            return
+
+        if len(new_password) < 6:
+            messagebox.showwarning(
+                "Senha inválida",
+                "A nova senha deve possuir pelo menos 6 caracteres.",
+                parent=self.window,
+            )
+            return
+
+        if new_password != confirmation:
+            messagebox.showwarning(
+                "Senhas diferentes",
+                "A nova senha e a confirmação não coincidem.",
+                parent=self.window,
+            )
+            return
+
+        if hmac.compare_digest(new_password, self.temporary_password):
+            messagebox.showwarning(
+                "Senha inválida",
+                "A nova senha deve ser diferente da senha temporária.",
+                parent=self.window,
+            )
+            return
+
+        try:
+            change_user_password(self.user["id_usuario"], new_password)
+            register_login_log(
+                self.user["usuario"],
+                True,
+                "Senha temporária alterada com sucesso.",
+                self.user["id_usuario"],
+            )
+            self.changed = True
+            messagebox.showinfo(
+                "Senha alterada",
+                "Sua senha foi alterada com sucesso.",
+                parent=self.window,
+            )
+            self.window.destroy()
+        except Exception as error:
+            messagebox.showerror(
+                "Erro ao alterar senha",
+                str(error),
+                parent=self.window,
+            )
+
+    def cancel(self):
+        self.changed = False
+        self.window.destroy()
+
+    def show(self):
+        self.parent.wait_window(self.window)
+        return self.changed
 
 
 # ============================================================
@@ -861,16 +1052,46 @@ class LoginWindow:
 
     def worker(self, username, password):
         user, error = authenticate_user(username, password)
-        self.root.after(0, lambda: self.finished(user, error))
+        self.root.after(
+            0,
+            lambda: self.finished(user, error, password),
+        )
 
-    def finished(self, user, error):
+    def finished(self, user, error, informed_password):
         self.authenticating = False
         self.button.config(state="normal", text="ENTRAR")
         self.password.delete(0, tk.END)
+
         if error:
             self.status.config(text="Falha na autenticação.")
             messagebox.showerror("Login não autorizado", error, parent=self.root)
             return
+
+        if user.get("trocar_senha"):
+            self.status.config(text="Alteração obrigatória de senha...")
+            changed = ForcedPasswordChangeDialog(
+                self.root,
+                user,
+                informed_password,
+            ).show()
+
+            informed_password = None
+
+            if not changed:
+                self.status.config(
+                    text="A senha deve ser alterada para continuar."
+                )
+                messagebox.showwarning(
+                    "Alteração obrigatória",
+                    "O acesso não será liberado enquanto a senha temporária "
+                    "não for alterada.",
+                    parent=self.root,
+                )
+                return
+
+            user["trocar_senha"] = False
+
+        informed_password = None
         self.authenticated_user = user
         self.root.destroy()
 
