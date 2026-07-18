@@ -22,7 +22,7 @@ from PIL import Image, ImageTk
 load_dotenv()
 
 APP_NAME = "FTECH App"
-APP_VERSION = os.getenv("APP_VERSION", "1.0.2").strip()
+APP_VERSION = os.getenv("APP_VERSION", "2.0.1").strip()
 SQL_SERVER = os.getenv("SQL_SERVER", "").strip()
 SQL_DATABASE = os.getenv("SQL_DATABASE", "").strip()
 SQL_USER = os.getenv("SQL_USER", "").strip()
