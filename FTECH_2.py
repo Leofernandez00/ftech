@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import json
 import hmac
 import time
 import socket
@@ -22,7 +23,7 @@ from PIL import Image, ImageTk
 load_dotenv()
 
 APP_NAME = "FTECH App"
-APP_VERSION = os.getenv("APP_VERSION", "2.1.12").strip()
+APP_VERSION = os.getenv("APP_VERSION", "2.0.13").strip()
 SQL_SERVER = os.getenv("SQL_SERVER", "").strip()
 SQL_DATABASE = os.getenv("SQL_DATABASE", "").strip()
 SQL_USER = os.getenv("SQL_USER", "").strip()
@@ -47,7 +48,8 @@ ZOOM_JS = r"""
         window.__zoomInstalled = true;
 
         let zoomSalvo = parseFloat(localStorage.getItem('ftech_zoom'));
-        let zoom = Number.isFinite(zoomSalvo) ? zoomSalvo : 1.0;
+        let zoomInicial = __FTECH_INITIAL_ZOOM__;
+        let zoom = Number.isFinite(zoomSalvo) ? zoomSalvo : zoomInicial;
 
         function limitarZoom(valor) {
             return Math.min(Math.max(valor, 0.5), 3.0);
@@ -56,6 +58,11 @@ ZOOM_JS = r"""
             zoom = limitarZoom(zoom);
             document.body.style.zoom = String(zoom);
             localStorage.setItem('ftech_zoom', String(zoom));
+            // O zoom continua persistido no localStorage. Evitamos chamar
+            // salvar_zoom via pywebview aqui porque a navegação/reload do AppSheet
+            // pode destruir o callback JS antes do retorno do Python, gerando
+            // JavascriptException em _returnValuesCallbacks.
+
         }
         applyZoom();
 
@@ -100,6 +107,12 @@ ZOOM_JS = r"""
             return btn;
         }
 
+        container.appendChild(makeButton('↗', function () {
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.abrir_nova_janela().catch(function () {});
+            }
+        }, 'Abrir nova janela do FTECH'));
+
         container.appendChild(makeButton('+', function () {
             zoom = Math.round(Math.min(zoom + 0.1, 3.0) * 10) / 10;
             applyZoom();
@@ -131,7 +144,10 @@ THEME_JS = r"""
         if (window.__ftechThemeInstalled) return;
         window.__ftechThemeInstalled = true;
 
-        let temaEscuro = localStorage.getItem('ftech_tema') === 'escuro';
+        const temaSalvo = localStorage.getItem('ftech_tema');
+        let temaEscuro = temaSalvo === null
+            ? __FTECH_INITIAL_DARK__
+            : temaSalvo === 'escuro';
 
         const style = document.createElement('style');
         style.id = 'ftech-theme-style';
@@ -183,6 +199,11 @@ THEME_JS = r"""
             localStorage.setItem(
                 'ftech_tema', temaEscuro ? 'escuro' : 'claro'
             );
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.salvar_tema(
+                    temaEscuro ? 'escuro' : 'claro'
+                ).catch(function () {});
+            }
         }
 
         button.addEventListener('click', function (event) {
@@ -246,6 +267,62 @@ def get_application_directory():
 
 def get_executable_path():
     return os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__)
+
+
+class PreferenciasWeb:
+    """Salva tema e zoom fora do navegador para persistirem entre execuções."""
+
+    def __init__(self, caminho):
+        self.caminho = caminho
+        self.lock = threading.Lock()
+        self.dados = {"tema": "claro", "zoom": 1.0}
+        self.abrir_nova_janela_callback = None
+        self._carregar()
+
+    def _carregar(self):
+        try:
+            with open(self.caminho, "r", encoding="utf-8") as arquivo:
+                dados = json.load(arquivo)
+            if dados.get("tema") in ("claro", "escuro"):
+                self.dados["tema"] = dados["tema"]
+            zoom = float(dados.get("zoom", 1.0))
+            self.dados["zoom"] = min(max(zoom, 0.5), 3.0)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            pass
+
+    def _salvar(self):
+        os.makedirs(os.path.dirname(self.caminho), exist_ok=True)
+        temporario = self.caminho + ".tmp"
+        with open(temporario, "w", encoding="utf-8") as arquivo:
+            json.dump(self.dados, arquivo, ensure_ascii=False, indent=2)
+        os.replace(temporario, self.caminho)
+
+    def salvar_zoom(self, zoom):
+        try:
+            valor = min(max(float(zoom), 0.5), 3.0)
+            with self.lock:
+                self.dados["zoom"] = valor
+                self._salvar()
+            return True
+        except (OSError, ValueError, TypeError):
+            return False
+
+    def salvar_tema(self, tema):
+        if tema not in ("claro", "escuro"):
+            return False
+        try:
+            with self.lock:
+                self.dados["tema"] = tema
+                self._salvar()
+            return True
+        except OSError:
+            return False
+
+    def abrir_nova_janela(self):
+        if callable(self.abrir_nova_janela_callback):
+            self.abrir_nova_janela_callback()
+            return True
+        return False
 
 
 def get_sql_connection():
@@ -317,8 +394,9 @@ def authenticate_user(username, password):
             cursor.execute(
                 """
                 SELECT ID_USUARIO, USUARIO, NOME_COMPLETO, SENHA_HASH, SENHA_SALT,
-                       PROVEDOR_LOGIN, EMAIL_APPSHEET, APPSHEET_URL, ATIVO,
-                       BLOQUEADO, TENTATIVAS_LOGIN
+                       PROVEDOR_LOGIN, EMAIL_APPSHEET, APPSHEET_SENHA, APPSHEET_URL, ATIVO,
+                       BLOQUEADO, TENTATIVAS_LOGIN,
+                       TROCAR_SENHA_PROXIMO_LOGIN
                 FROM dbo.FTECH_USUARIOS_APP
                 WHERE LOWER(USUARIO) = LOWER(?)
                 """,
@@ -338,10 +416,12 @@ def authenticate_user(username, password):
                 "senha_salt": row.SENHA_SALT,
                 "provedor": row.PROVEDOR_LOGIN,
                 "email_appsheet": row.EMAIL_APPSHEET,
+                "appsheet_senha": row.APPSHEET_SENHA,
                 "appsheet_url": row.APPSHEET_URL,
                 "ativo": bool(row.ATIVO),
                 "bloqueado": bool(row.BLOQUEADO),
                 "tentativas": int(row.TENTATIVAS_LOGIN or 0),
+                "trocar_senha": bool(row.TROCAR_SENHA_PROXIMO_LOGIN),
             }
 
             if not user["ativo"]:
@@ -387,6 +467,195 @@ def authenticate_user(username, password):
 
     except Exception as error:
         return None, f"Não foi possível validar o usuário.\n\nDetalhes: {error}"
+
+
+def change_user_password(user_id, new_password):
+    """Altera a senha interna do FTECH após o primeiro login."""
+    if len(new_password) < 6:
+        raise ValueError("A nova senha deve ter pelo menos 6 caracteres.")
+
+    password_hash, salt = generate_password_hash(new_password)
+
+    with get_sql_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            UPDATE dbo.FTECH_USUARIOS_APP
+            SET SENHA_HASH = ?,
+                SENHA_SALT = ?,
+                TROCAR_SENHA_PROXIMO_LOGIN = 0,
+                TENTATIVAS_LOGIN = 0,
+                BLOQUEADO = 0,
+                DATA_ULTIMA_TROCA_SENHA = SYSDATETIME(),
+                DATA_ALTERACAO = SYSDATETIME()
+            WHERE ID_USUARIO = ?
+            """,
+            password_hash,
+            salt,
+            user_id,
+        )
+
+        if cursor.rowcount == 0:
+            raise RuntimeError("Usuário não encontrado para alteração da senha.")
+
+        connection.commit()
+
+
+class ForcedPasswordChangeDialog:
+    def __init__(self, parent, user, temporary_password):
+        self.parent = parent
+        self.user = user
+        self.temporary_password = temporary_password
+        self.changed = False
+
+        self.window = tk.Toplevel(parent)
+        self.window.title("FTECH | Alteração obrigatória de senha")
+        self.window.resizable(False, False)
+        self.window.transient(parent)
+        self.window.grab_set()
+        self.window.protocol("WM_DELETE_WINDOW", self.cancel)
+        center_window(self.window, 470, 410)
+        self.window.configure(bg="#f4f4f4")
+
+        tk.Label(
+            self.window,
+            text="Crie sua nova senha",
+            font=("Segoe UI", 17, "bold"),
+            bg="#1f4e78",
+            fg="white",
+            pady=18,
+        ).pack(fill="x")
+
+        form = tk.Frame(self.window, bg="#f4f4f4", padx=45, pady=22)
+        form.pack(fill="both", expand=True)
+
+        tk.Label(
+            form,
+            text=(
+                "A senha utilizada é temporária. Para continuar, "
+                "defina uma senha pessoal."
+            ),
+            font=("Segoe UI", 10),
+            bg="#f4f4f4",
+            wraplength=370,
+            justify="left",
+        ).pack(fill="x", pady=(0, 15))
+
+        tk.Label(
+            form,
+            text="Nova senha",
+            font=("Segoe UI", 10, "bold"),
+            bg="#f4f4f4",
+            anchor="w",
+        ).pack(fill="x")
+
+        self.new_password = tk.Entry(
+            form,
+            show="●",
+            font=("Segoe UI", 11),
+            relief="solid",
+            bd=1,
+        )
+        self.new_password.pack(fill="x", ipady=6, pady=(4, 12))
+
+        tk.Label(
+            form,
+            text="Confirmar nova senha",
+            font=("Segoe UI", 10, "bold"),
+            bg="#f4f4f4",
+            anchor="w",
+        ).pack(fill="x")
+
+        self.confirm_password = tk.Entry(
+            form,
+            show="●",
+            font=("Segoe UI", 11),
+            relief="solid",
+            bd=1,
+        )
+        self.confirm_password.pack(fill="x", ipady=6, pady=(4, 17))
+
+        tk.Button(
+            form,
+            text="ALTERAR SENHA E CONTINUAR",
+            font=("Segoe UI", 14, "bold"),
+            bg="#33e60b",
+            fg="#030303",
+            activebackground="#2dcc0a",
+            bd=0,
+            cursor="hand2",
+            command=self.save,
+        ).pack(fill="x", ipady=15)
+
+        self.window.bind("<Return>", lambda _event: self.save())
+        self.window.bind("<Escape>", lambda _event: self.cancel())
+        self.new_password.focus_set()
+
+    def save(self):
+        new_password = self.new_password.get()
+        confirmation = self.confirm_password.get()
+
+        if not new_password or not confirmation:
+            messagebox.showwarning(
+                "Campos obrigatórios",
+                "Informe e confirme a nova senha.",
+                parent=self.window,
+            )
+            return
+
+        if len(new_password) < 6:
+            messagebox.showwarning(
+                "Senha inválida",
+                "A nova senha deve possuir pelo menos 6 caracteres.",
+                parent=self.window,
+            )
+            return
+
+        if new_password != confirmation:
+            messagebox.showwarning(
+                "Senhas diferentes",
+                "A nova senha e a confirmação não coincidem.",
+                parent=self.window,
+            )
+            return
+
+        if hmac.compare_digest(new_password, self.temporary_password):
+            messagebox.showwarning(
+                "Senha inválida",
+                "A nova senha deve ser diferente da senha temporária.",
+                parent=self.window,
+            )
+            return
+
+        try:
+            change_user_password(self.user["id_usuario"], new_password)
+            register_login_log(
+                self.user["usuario"],
+                True,
+                "Senha temporária alterada com sucesso.",
+                self.user["id_usuario"],
+            )
+            self.changed = True
+            messagebox.showinfo(
+                "Senha alterada",
+                "Sua senha foi alterada com sucesso.",
+                parent=self.window,
+            )
+            self.window.destroy()
+        except Exception as error:
+            messagebox.showerror(
+                "Erro ao alterar senha",
+                str(error),
+                parent=self.window,
+            )
+
+    def cancel(self):
+        self.changed = False
+        self.window.destroy()
+
+    def show(self):
+        self.parent.wait_window(self.window)
+        return self.changed
 
 
 # ============================================================
@@ -486,7 +755,7 @@ def create_updater_script(downloaded_file, current_executable):
 
     lines = [
         "@echo off",
-        "setlocal EnableExtensions",
+        "setlocal EnableExtensions EnableDelayedExpansion",
         "title Atualizacao do FTECH",
         f'set "PID={pid}"',
         f'set "NOVO_ARQUIVO={os.path.abspath(downloaded_file)}"',
@@ -497,14 +766,25 @@ def create_updater_script(downloaded_file, current_executable):
         "    timeout /t 1 /nobreak >NUL",
         "    goto AGUARDAR",
         ")",
-        "timeout /t 2 /nobreak >NUL",
+        "rem O PyInstaller --onefile ainda precisa encerrar o bootloader e limpar a pasta _MEI.",
+        "timeout /t 8 /nobreak >NUL",
+        "set /A TENTATIVAS=0",
+        ":SUBSTITUIR",
         'copy /Y "%NOVO_ARQUIVO%" "%ARQUIVO_ATUAL%" >NUL',
         "if errorlevel 1 (",
-        '    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList \"/c copy /Y \\\"%NOVO_ARQUIVO%\\\" \\\"%ARQUIVO_ATUAL%\\\" ^& start \\\"\\\" \\\"%ARQUIVO_ATUAL%\\\"\""',
-        "    exit /b 0",
+        "    set /A TENTATIVAS+=1",
+        "    if !TENTATIVAS! LSS 20 (",
+        "        timeout /t 1 /nobreak >NUL",
+        "        goto SUBSTITUIR",
+        "    )",
+        '    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -Verb RunAs -Wait -ArgumentList \"/c copy /Y \\\"%NOVO_ARQUIVO%\\\" \\\"%ARQUIVO_ATUAL%\\\"\""',
+        "    if errorlevel 1 exit /b 1",
         ")",
+        'if not exist "%ARQUIVO_ATUAL%" exit /b 1',
         'del /F /Q "%NOVO_ARQUIVO%" >NUL 2>&1',
+        "timeout /t 3 /nobreak >NUL",
         'start "" "%ARQUIVO_ATUAL%"',
+        "timeout /t 2 /nobreak >NUL",
         'del /F /Q "%~f0" >NUL 2>&1',
     ]
 
@@ -788,16 +1068,46 @@ class LoginWindow:
 
     def worker(self, username, password):
         user, error = authenticate_user(username, password)
-        self.root.after(0, lambda: self.finished(user, error))
+        self.root.after(
+            0,
+            lambda: self.finished(user, error, password),
+        )
 
-    def finished(self, user, error):
+    def finished(self, user, error, informed_password):
         self.authenticating = False
         self.button.config(state="normal", text="ENTRAR")
         self.password.delete(0, tk.END)
+
         if error:
             self.status.config(text="Falha na autenticação.")
             messagebox.showerror("Login não autorizado", error, parent=self.root)
             return
+
+        if user.get("trocar_senha"):
+            self.status.config(text="Alteração obrigatória de senha...")
+            changed = ForcedPasswordChangeDialog(
+                self.root,
+                user,
+                informed_password,
+            ).show()
+
+            informed_password = None
+
+            if not changed:
+                self.status.config(
+                    text="A senha deve ser alterada para continuar."
+                )
+                messagebox.showwarning(
+                    "Alteração obrigatória",
+                    "O acesso não será liberado enquanto a senha temporária "
+                    "não for alterada.",
+                    parent=self.root,
+                )
+                return
+
+            user["trocar_senha"] = False
+
+        informed_password = None
         self.authenticated_user = user
         self.root.destroy()
 
@@ -927,6 +1237,20 @@ def criar_javascript_email(email, provider):
                 setNativeValue(field, EMAIL);
             }}
 
+            // Avança automaticamente para a etapa da senha.
+            if (!window.__ftechEmailSubmitted) {{
+                let nextButton = null;
+                if ({provider!r} === 'GOOGLE') {{
+                    nextButton = document.querySelector('#identifierNext button, #identifierNext');
+                }} else {{
+                    nextButton = document.querySelector('#idSIButton9, input[type=\"submit\"], button[type=\"submit\"]');
+                }}
+                if (nextButton && !nextButton.disabled) {{
+                    window.__ftechEmailSubmitted = true;
+                    setTimeout(function () {{ nextButton.click(); }}, 600);
+                }}
+            }}
+
             return true;
         }}
 
@@ -940,6 +1264,416 @@ def criar_javascript_email(email, provider):
 
         return 'Aguardando campo de e-mail';
     }})();
+    """
+
+def criar_javascript_senha(senha, provider):
+    """Preenche a senha do Google/Microsoft e avança somente quando o campo estiver disponível."""
+    senha = str(senha or "")
+    provider = str(provider or "").upper().strip()
+
+    if provider == "GOOGLE":
+        selectors = [
+            "input[name='Passwd']",
+            "input[type='password']",
+        ]
+        next_selectors = [
+            "#passwordNext button",
+            "#passwordNext",
+        ]
+    else:
+        selectors = [
+            "#i0118",
+            "input[name='passwd']",
+            "input[type='password']",
+        ]
+        next_selectors = [
+            "#idSIButton9",
+            "input[type='submit'][value='Sign in']",
+            "input[type='submit'][value='Entrar']",
+            "button[type='submit']",
+        ]
+
+    selectors_js = repr(", ".join(selectors))
+    next_selectors_js = repr(", ".join(next_selectors))
+
+    return f"""
+    (function () {{
+        const PASSWORD = {senha!r};
+        const PASSWORD_SELECTORS = {selectors_js};
+        const NEXT_SELECTORS = {next_selectors_js};
+
+        if (!PASSWORD) return 'Senha APPSHEET vazia';
+
+        function visible(element) {{
+            if (!element) return false;
+            const style = window.getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style.display !== 'none' &&
+                   style.visibility !== 'hidden' &&
+                   rect.width > 0 && rect.height > 0;
+        }}
+
+        function setNativeValue(element, value) {{
+            const descriptor = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype, 'value'
+            );
+            if (descriptor && descriptor.set) {{
+                descriptor.set.call(element, value);
+            }} else {{
+                element.value = value;
+            }}
+            element.dispatchEvent(new Event('input', {{ bubbles: true }}));
+            element.dispatchEvent(new Event('change', {{ bubbles: true }}));
+            element.dispatchEvent(new KeyboardEvent('keyup', {{ bubbles: true, key: 'a' }}));
+            element.focus();
+        }}
+
+        function normalizarTexto(texto) {{
+            return (texto || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        }}
+
+        function selecionarUsoDeSenhaMicrosoft() {{
+            if ({provider!r} !== 'MICROSOFT') return false;
+
+            // Em algumas contas a Microsoft oferece primeiro login por código.
+            // Nessa tela, escolhe explicitamente "Use sua senha" antes de procurar
+            // pelo campo de senha.
+            const elementos = document.querySelectorAll(
+                'a, button, [role="button"], input[type="button"], input[type="submit"]'
+            );
+
+            for (const elemento of elementos) {{
+                if (!visible(elemento) || elemento.disabled) continue;
+
+                const texto = normalizarTexto(
+                    elemento.innerText || elemento.textContent || elemento.value || ''
+                );
+
+                if (
+                    texto === 'use sua senha' ||
+                    texto === 'usar sua senha' ||
+                    texto === 'use your password' ||
+                    texto.includes('use sua senha') ||
+                    texto.includes('usar sua senha')
+                ) {{
+                    if (!window.__ftechUsePasswordClicked) {{
+                        window.__ftechUsePasswordClicked = true;
+                        elemento.scrollIntoView({{ block: 'center', inline: 'center' }});
+                        setTimeout(function () {{
+                            elemento.focus();
+                            elemento.click();
+                        }}, 350);
+                    }}
+                    return true;
+                }}
+            }}
+            return false;
+        }}
+
+        function localizarCampoSenha() {{
+            const fields = document.querySelectorAll(PASSWORD_SELECTORS);
+            for (const field of fields) {{
+                if (visible(field) && !field.disabled && !field.readOnly) return field;
+            }}
+            return null;
+        }}
+
+        function localizarBotaoAvancar() {{
+            const buttons = document.querySelectorAll(NEXT_SELECTORS);
+            for (const button of buttons) {{
+                if (visible(button) && !button.disabled) return button;
+            }}
+            return null;
+        }}
+
+        function preencherEAvancar() {{
+            if (window.__ftechPasswordSubmitted) return true;
+
+            const field = localizarCampoSenha();
+            if (!field) {{
+                selecionarUsoDeSenhaMicrosoft();
+                return false;
+            }}
+
+            if (field.value !== PASSWORD) {{
+                setNativeValue(field, PASSWORD);
+            }}
+
+            if (field.value !== PASSWORD) return false;
+
+            const button = localizarBotaoAvancar();
+            if (!button) return false;
+
+            window.__ftechPasswordSubmitted = true;
+            setTimeout(function () {{
+                button.focus();
+                button.click();
+            }}, 700);
+            return true;
+        }}
+
+        if (preencherEAvancar()) return 'Senha preenchida e login enviado';
+
+        if (!window.__ftechPasswordTimer) {{
+            let attempts = 0;
+            window.__ftechPasswordTimer = setInterval(function () {{
+                attempts += 1;
+                if (preencherEAvancar() || attempts >= 120) {{
+                    clearInterval(window.__ftechPasswordTimer);
+                    window.__ftechPasswordTimer = null;
+                }}
+            }}, 500);
+        }}
+
+        return 'Aguardando campo de senha';
+    }})();
+    """
+
+
+def criar_javascript_microsoft_continuar_conectado():
+    """Confirma automaticamente a tela 'Continuar conectado?' da Microsoft."""
+    return r"""
+    (function () {
+        function visible(element) {
+            if (!element) return false;
+            const style = window.getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style.display !== 'none' &&
+                   style.visibility !== 'hidden' &&
+                   rect.width > 0 && rect.height > 0;
+        }
+
+        function normalizarTexto(texto) {
+            return (texto || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        }
+
+        function confirmar() {
+            if (window.__ftechStaySignedInClicked) return true;
+
+            const pagina = normalizarTexto(document.body ? document.body.innerText : '');
+            const ehTelaConfirmacao =
+                pagina.includes('continuar conectado') ||
+                pagina.includes('stay signed in');
+
+            if (!ehTelaConfirmacao) return false;
+
+            // IDs usados pela Microsoft nessa confirmação, quando disponíveis.
+            const candidatosId = ['#idSIButton9', 'input#idSIButton9'];
+            for (const seletor of candidatosId) {
+                const botao = document.querySelector(seletor);
+                if (botao && visible(botao) && !botao.disabled) {
+                    window.__ftechStaySignedInClicked = true;
+                    setTimeout(function () { botao.click(); }, 350);
+                    return true;
+                }
+            }
+
+            // Fallback por texto para layouts novos da Microsoft.
+            const elementos = document.querySelectorAll(
+                'button, input[type="submit"], input[type="button"], [role="button"]'
+            );
+            for (const elemento of elementos) {
+                if (!visible(elemento) || elemento.disabled) continue;
+                const texto = normalizarTexto(
+                    elemento.innerText || elemento.textContent || elemento.value || ''
+                );
+                if (texto === 'sim' || texto === 'yes') {
+                    window.__ftechStaySignedInClicked = true;
+                    setTimeout(function () { elemento.click(); }, 350);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if (confirmar()) return 'Continuar conectado confirmado';
+
+        if (!window.__ftechStaySignedInTimer) {
+            let attempts = 0;
+            window.__ftechStaySignedInTimer = setInterval(function () {
+                attempts += 1;
+                if (confirmar() || attempts >= 120) {
+                    clearInterval(window.__ftechStaySignedInTimer);
+                    window.__ftechStaySignedInTimer = null;
+                }
+            }, 500);
+        }
+        return 'Aguardando confirmação Microsoft';
+    })();
+    """
+
+
+def criar_javascript_tela_aguarde():
+    """Cobre as telas de autenticação para impedir interação do usuário durante o login automático."""
+    return r"""
+    (function () {
+        if (document.getElementById('ftech-login-overlay')) return 'Tela de aguarde já ativa';
+        if (window.__ftechOverlayTimeoutExpirado) return 'Tela de aguarde removida para diagnóstico';
+        if (!document.documentElement) return 'Documento ainda não disponível';
+
+        // No AppSheet, cobre somente a tela de escolha do provedor.
+        // Depois que o aplicativo estiver autenticado, não cria a cobertura.
+        if ((location.hostname || '').toLowerCase().includes('appsheet.com')) {
+            const elementos = Array.from(document.querySelectorAll('button, a, [role="button"], div[tabindex]'));
+            const temProvedor = elementos.some(function (el) {
+                const texto = (el.innerText || el.textContent || '').trim().toLowerCase();
+                return texto === 'google' || texto === 'microsoft';
+            });
+            if (!temProvedor) return 'AppSheet autenticado ou fora da tela de provedor';
+        }
+
+        const overlay = document.createElement('div');
+        overlay.id = 'ftech-login-overlay';
+        overlay.style.cssText = [
+            'position:fixed','inset:0','z-index:2147483647',
+            'background:#1f4e78','display:flex','align-items:center',
+            'justify-content:center','font-family:Segoe UI,Arial,sans-serif',
+            'color:white','user-select:none','cursor:wait'
+        ].join(';');
+        const caixa = document.createElement('div');
+        caixa.style.cssText = 'text-align:center;padding:40px;max-width:520px';
+
+        const titulo = document.createElement('div');
+        titulo.style.cssText = 'font-size:34px;font-weight:700;margin-bottom:12px';
+        titulo.textContent = 'FTECH';
+
+        const status = document.createElement('div');
+        status.style.cssText = 'font-size:20px;font-weight:600;margin-bottom:8px';
+        status.textContent = 'Entrando no sistema...';
+
+        const mensagem = document.createElement('div');
+        mensagem.style.cssText = 'font-size:14px;opacity:.9;margin-bottom:28px';
+        mensagem.textContent = 'Aguarde enquanto preparamos seu acesso.';
+
+        const spinner = document.createElement('div');
+        spinner.style.cssText = 'width:46px;height:46px;border:5px solid rgba(255,255,255,.30);border-top-color:white;border-radius:50%;margin:0 auto;animation:ftechSpin .85s linear infinite';
+
+        caixa.appendChild(titulo);
+        caixa.appendChild(status);
+        caixa.appendChild(mensagem);
+        caixa.appendChild(spinner);
+        overlay.appendChild(caixa);
+
+        const style = document.createElement('style');
+        style.id = 'ftech-login-overlay-style';
+        style.textContent = '@keyframes ftechSpin{to{transform:rotate(360deg)}}';
+        (document.head || document.documentElement).appendChild(style);
+        (document.body || document.documentElement).appendChild(overlay);
+
+        // Se esta etapa do login não avançar, libera a tela real para diagnóstico.
+        // A cada nova página do provedor o contador reinicia automaticamente.
+        setTimeout(function () {
+            const atual = document.getElementById('ftech-login-overlay');
+            if (atual) {
+                atual.remove();
+                const estilo = document.getElementById('ftech-login-overlay-style');
+                if (estilo) estilo.remove();
+                window.__ftechOverlayTimeoutExpirado = true;
+                console.warn('FTECH: autenticação não avançou em 15 segundos; tela real liberada para diagnóstico.');
+            }
+        }, 15000);
+
+        return 'Tela de aguarde ativada';
+    })();
+    """
+
+def criar_javascript_aguarde_document_start():
+    """Mostra a tela FTECH antes de Google/Microsoft renderizarem o login."""
+    return r"""
+    (function () {
+        const host = (location.hostname || '').toLowerCase();
+        const ehLoginExterno =
+            host === 'accounts.google.com' ||
+            host.includes('login.microsoftonline.com') ||
+            host.includes('login.live.com') ||
+            host.includes('login.microsoft.com');
+
+        if (!ehLoginExterno) return;
+
+        function instalar() {
+            if (window.__ftechOverlayTimeoutExpirado) return;
+            if (document.getElementById('ftech-login-overlay')) return;
+            if (!document.documentElement) {
+                setTimeout(instalar, 10);
+                return;
+            }
+
+            const style = document.createElement('style');
+            style.id = 'ftech-login-overlay-style';
+            style.textContent = `
+                @keyframes ftechSpin { to { transform: rotate(360deg); } }
+                #ftech-login-overlay {
+                    position: fixed !important;
+                    inset: 0 !important;
+                    z-index: 2147483647 !important;
+                    background: #1f4e78 !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    font-family: 'Segoe UI', Arial, sans-serif !important;
+                    color: white !important;
+                    user-select: none !important;
+                    cursor: wait !important;
+                }
+            `;
+            (document.head || document.documentElement).appendChild(style);
+
+            const overlay = document.createElement('div');
+            overlay.id = 'ftech-login-overlay';
+            const caixa = document.createElement('div');
+            caixa.style.cssText = 'text-align:center;padding:40px;max-width:520px';
+
+            const titulo = document.createElement('div');
+            titulo.style.cssText = 'font-size:34px;font-weight:700;margin-bottom:12px';
+            titulo.textContent = 'FTECH';
+
+            const status = document.createElement('div');
+            status.style.cssText = 'font-size:20px;font-weight:600;margin-bottom:8px';
+            status.textContent = 'Entrando no sistema...';
+
+            const mensagem = document.createElement('div');
+            mensagem.style.cssText = 'font-size:14px;opacity:.9;margin-bottom:28px';
+            mensagem.textContent = 'Aguarde enquanto preparamos seu acesso.';
+
+            const spinner = document.createElement('div');
+            spinner.style.cssText = 'width:46px;height:46px;border:5px solid rgba(255,255,255,.30);border-top-color:white;border-radius:50%;margin:0 auto;animation:ftechSpin .85s linear infinite';
+
+            caixa.appendChild(titulo);
+            caixa.appendChild(status);
+            caixa.appendChild(mensagem);
+            caixa.appendChild(spinner);
+            overlay.appendChild(caixa);
+            (document.body || document.documentElement).appendChild(overlay);
+
+            // Segurança para diagnóstico: se o login ficar parado nesta página,
+            // remove a cobertura e deixa o usuário enxergar a etapa real.
+            setTimeout(function () {
+                const atual = document.getElementById('ftech-login-overlay');
+                if (atual) {
+                    atual.remove();
+                    const estilo = document.getElementById('ftech-login-overlay-style');
+                    if (estilo) estilo.remove();
+                    window.__ftechOverlayTimeoutExpirado = true;
+                    console.warn('FTECH: autenticação não avançou em 15 segundos; tela real liberada para diagnóstico.');
+                }
+            }, 15000);
+        }
+
+        instalar();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', instalar, { once: true });
+        }
+    })();
     """
 
 
@@ -972,6 +1706,16 @@ def habilitar_autofill_senhas_webview2():
                 core = sender.CoreWebView2
                 if core is None:
                     return
+
+                # Instala a cobertura antes de cada navegação externa de login.
+                # Isso impede que as telas Google/Microsoft apareçam por alguns
+                # instantes antes do JavaScript executado no evento loaded.
+                try:
+                    core.AddScriptToExecuteOnDocumentCreatedAsync(
+                        criar_javascript_aguarde_document_start()
+                    )
+                except Exception as error:
+                    print(f"Não foi possível preparar a tela de aguarde antecipada: {error}")
 
                 settings = core.Settings
 
@@ -1032,11 +1776,25 @@ def open_appsheet(user):
     username = sanitize_username(user["usuario"])
     provider = str(user["provedor"]).upper().strip()
     email_appsheet = str(user.get("email_appsheet") or "").strip()
+    appsheet_senha = str(user.get("appsheet_senha") or "")
     appsheet_url = user.get("appsheet_url") or APPSHEET_URL_PADRAO
 
     base = os.getenv("LOCALAPPDATA") or get_application_directory()
     profile = os.path.join(base, "FTECH", "webview_profiles", provider, username)
     os.makedirs(profile, exist_ok=True)
+
+    preferencias_path = os.path.join(
+        base, "FTECH", "preferencias", f"{provider}_{username}.json"
+    )
+    preferencias = PreferenciasWeb(preferencias_path)
+
+    zoom_js = ZOOM_JS.replace(
+        "__FTECH_INITIAL_ZOOM__", repr(preferencias.dados["zoom"])
+    )
+    theme_js = THEME_JS.replace(
+        "__FTECH_INITIAL_DARK__",
+        "true" if preferencias.dados["tema"] == "escuro" else "false",
+    )
 
     webview.settings["ALLOW_DOWNLOADS"] = True
 
@@ -1050,54 +1808,87 @@ def open_appsheet(user):
         height=800,
         min_size=(900, 600),
         resizable=True,
+        js_api=preferencias,
     )
 
     provider_js = criar_javascript_provedor(provider)
     email_js = criar_javascript_email(email_appsheet, provider)
+    senha_js = criar_javascript_senha(appsheet_senha, provider)
+    microsoft_continuar_js = criar_javascript_microsoft_continuar_conectado()
+    aguarde_js = criar_javascript_tela_aguarde()
 
-    def on_loaded():
-        try:
-            current_url = (window.get_current_url() or "").lower()
+    def configurar_janela(janela):
+        def on_loaded():
+            try:
+                current_url = (janela.get_current_url() or "").lower()
 
-            # Zoom nas páginas do AppSheet.
-            if "appsheet.com" in current_url:
-                try:
-                    window.evaluate_js(ZOOM_JS)
-                except Exception as error:
-                    print(f"Erro ao instalar zoom: {error}")
+                # Zoom nas páginas do AppSheet.
+                if "appsheet.com" in current_url:
+                    try:
+                        janela.evaluate_js(zoom_js)
+                    except Exception as error:
+                        print(f"Erro ao instalar zoom: {error}")
 
-                try:
-                    window.evaluate_js(THEME_JS)
-                except Exception as error:
-                    print(f"Erro ao instalar seletor de tema: {error}")
+                    try:
+                        janela.evaluate_js(theme_js)
+                    except Exception as error:
+                        print(f"Erro ao instalar seletor de tema: {error}")
 
-                # Na tela de escolha, seleciona automaticamente o provedor.
-                try:
-                    window.evaluate_js(provider_js)
-                except Exception as error:
-                    print(f"Erro ao selecionar provedor: {error}")
+                    # Na tela de escolha, seleciona automaticamente o provedor.
+                    try:
+                        janela.evaluate_js(provider_js)
+                        janela.evaluate_js(aguarde_js)
+                    except Exception as error:
+                        print(f"Erro ao selecionar provedor: {error}")
 
-            # Na página externa do provedor, preenche automaticamente o e-mail.
-            if provider == "GOOGLE" and "accounts.google.com" in current_url:
-                try:
-                    window.evaluate_js(email_js)
-                except Exception as error:
-                    print(f"Erro ao preencher e-mail Google: {error}")
+                # Google: tenta preencher e-mail e senha automaticamente usando
+                # os campos normais da página. A tela de aguarde possui timeout;
+                # se o Google exigir verificação adicional, ela desaparece e o
+                # usuário pode concluir essa etapa manualmente.
+                if provider == "GOOGLE" and "accounts.google.com" in current_url:
+                    try:
+                        janela.evaluate_js(aguarde_js)
+                        janela.evaluate_js(email_js)
+                        janela.evaluate_js(senha_js)
+                    except Exception as error:
+                        print(f"Erro ao preencher login Google: {error}")
 
-            elif provider == "MICROSOFT" and (
-                "login.microsoftonline.com" in current_url
-                or "login.live.com" in current_url
-                or "login.microsoft.com" in current_url
-            ):
-                try:
-                    window.evaluate_js(email_js)
-                except Exception as error:
-                    print(f"Erro ao preencher e-mail Microsoft: {error}")
+                elif provider == "MICROSOFT" and (
+                    "login.microsoftonline.com" in current_url
+                    or "login.live.com" in current_url
+                    or "login.microsoft.com" in current_url
+                ):
+                    try:
+                        janela.evaluate_js(aguarde_js)
+                        janela.evaluate_js(email_js)
+                        janela.evaluate_js(senha_js)
+                        janela.evaluate_js(microsoft_continuar_js)
+                    except Exception as error:
+                        print(f"Erro ao preencher login Microsoft: {error}")
 
-        except Exception as error:
-            print(f"Erro ao tratar página carregada: {error}")
+            except Exception as error:
+                print(f"Erro ao tratar página carregada: {error}")
 
-    window.events.loaded += on_loaded
+        janela.events.loaded += on_loaded
+
+    configurar_janela(window)
+
+    def abrir_nova_janela():
+        nova_janela = webview.create_window(
+            title=(
+                f"FTECH | Alta Paulista | {user['nome_completo']} | "
+                f"{email_appsheet}"
+            ),
+            url=appsheet_url,
+            width=1200,
+            height=800,
+            min_size=(900, 600),
+            resizable=True,
+            js_api=preferencias,
+        )
+        configurar_janela(nova_janela)
+
+    preferencias.abrir_nova_janela_callback = abrir_nova_janela
 
     # Ativa o gerenciador de senhas nativo do WebView2 antes da inicialização.
     habilitar_autofill_senhas_webview2()
