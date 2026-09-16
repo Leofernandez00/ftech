@@ -1,0 +1,750 @@
+import os
+import time
+import threading
+import pandas as pd
+import tkinter as tk
+from tkinter import scrolledtext, messagebox
+from sqlalchemy import create_engine, text
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+from datetime import datetime
+
+# ============================================================
+# CONFIGURAÇÕES
+# ============================================================
+
+# Pasta atual - continua funcionando exatamente como já funciona
+PASTA_EXCEL = r"\\Server\z_powerbi\DADOS\ESTOQUE_DIA"
+TABELA = "ESTOQUE_ATUAL"
+
+# NOVA pasta para manter histórico diário
+PASTA_EXCEL_HISTORICO = r"\\Server\z_powerbi\DADOS\ESTOQUE_HISTORICO"
+TABELA_HISTORICO = "ESTOQUE_HISTORICO"
+
+SERVER = "188.220.168.222"
+DATABASE = "FTECH"
+USERNAME = "ftech"
+PASSWORD = "********"
+
+# ============================================================
+# CONEXÃO SQL SERVER
+# ============================================================
+
+conn_str = (
+    "mssql+pyodbc:///?odbc_connect="
+    "Driver={ODBC Driver 17 for SQL Server};"
+    f"Server={SERVER};"
+    f"Database={DATABASE};"
+    f"UID={USERNAME};"
+    f"PWD={PASSWORD};"
+)
+
+engine = create_engine(conn_str)
+
+# ============================================================
+# CONTROLE PARA EVITAR IMPORTAÇÕES SIMULTÂNEAS DO HISTÓRICO
+# ============================================================
+
+lock_historico = threading.Lock()
+
+
+# ============================================================
+# LOG
+# ============================================================
+
+def log(msg):
+    text_log.config(state=tk.NORMAL)
+
+    horario = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    text_log.insert(
+        tk.END,
+        f"[{horario}] {msg}\n"
+    )
+
+    text_log.see(tk.END)
+    text_log.config(state=tk.DISABLED)
+    root.update()
+
+
+# ============================================================
+# FUNÇÃO AUXILIAR
+# ============================================================
+
+def tratar_dataframe(df):
+    """
+    Faz exatamente os mesmos tratamentos utilizados atualmente.
+    """
+
+    df = df.apply(
+        lambda x: x.str.strip()
+        if x.dtype == "object"
+        else x
+    )
+
+    for col in df.columns:
+
+        if col in ["CUSTO STD", "SALDO", "TOTAL"]:
+            df[col] = pd.to_numeric(
+                df[col],
+                errors="coerce"
+            )
+
+        if col in ["ULTIMA COMPRA", "ULTIMA VENDA"]:
+            df[col] = pd.to_datetime(
+                df[col],
+                errors="coerce"
+            )
+
+    return df
+
+
+# ============================================================
+# ESTOQUE ATUAL
+#
+# ESTA ROTINA CONTINUA COM O MESMO COMPORTAMENTO:
+#
+# 1 - APAGA ESTOQUE_ATUAL
+# 2 - LÊ TODOS XLSX
+# 3 - IMPORTA NOVAMENTE
+# ============================================================
+
+def importar_dados():
+    try:
+
+        log("🔄 Iniciando atualização da tabela ESTOQUE_ATUAL...")
+
+        # ----------------------------------------------------
+        # Apagar dados antigos
+        # ----------------------------------------------------
+
+        with engine.connect() as conn:
+
+            conn.execute(
+                text(f"DELETE FROM {TABELA}")
+            )
+
+            conn.commit()
+
+        log("🧹 Dados antigos apagados.")
+
+        # ----------------------------------------------------
+        # Procurar arquivos
+        # ----------------------------------------------------
+
+        arquivos = [
+            f
+            for f in os.listdir(PASTA_EXCEL)
+            if f.lower().endswith(".xlsx")
+            and not f.startswith("~$")
+        ]
+
+        if not arquivos:
+
+            log(
+                "⚠️ Nenhum arquivo .xlsx encontrado "
+                "na pasta de ESTOQUE_ATUAL."
+            )
+
+            return
+
+        # ----------------------------------------------------
+        # Importar
+        # ----------------------------------------------------
+
+        for arquivo in arquivos:
+
+            caminho = os.path.join(
+                PASTA_EXCEL,
+                arquivo
+            )
+
+            log(
+                f"📂 Lendo arquivo ESTOQUE_ATUAL: {arquivo}"
+            )
+
+            df = pd.read_excel(
+                caminho,
+                dtype=str
+            )
+
+            df = tratar_dataframe(df)
+
+            df.to_sql(
+                TABELA,
+                engine,
+                if_exists="append",
+                index=False
+            )
+
+            log(
+                f"✅ {len(df)} registros importados "
+                f"do arquivo {arquivo}"
+            )
+
+        log(
+            "🏁 Atualização da ESTOQUE_ATUAL "
+            "concluída com sucesso!\n"
+        )
+
+    except Exception as e:
+
+        log(
+            f"❌ Erro durante a importação "
+            f"da ESTOQUE_ATUAL: {e}"
+        )
+
+
+# ============================================================
+# VERIFICAR SE ARQUIVO HISTÓRICO JÁ FOI IMPORTADO
+# ============================================================
+
+def arquivo_historico_ja_importado(arquivo):
+
+    try:
+
+        with engine.connect() as conn:
+
+            # Primeiro verifica se a tabela existe
+            sql_tabela = text("""
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.TABLES
+                WHERE TABLE_SCHEMA = 'dbo'
+                  AND TABLE_NAME = :tabela
+            """)
+
+            existe = conn.execute(
+                sql_tabela,
+                {
+                    "tabela": TABELA_HISTORICO
+                }
+            ).scalar()
+
+            # Se ainda não existe, obviamente o arquivo
+            # ainda não foi importado
+            if existe == 0:
+                return False
+
+            # ------------------------------------------------
+            # Verifica se a coluna ARQUIVO_ORIGEM existe
+            # ------------------------------------------------
+
+            sql_coluna = text("""
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = 'dbo'
+                  AND TABLE_NAME = :tabela
+                  AND COLUMN_NAME = 'ARQUIVO_ORIGEM'
+            """)
+
+            coluna_existe = conn.execute(
+                sql_coluna,
+                {
+                    "tabela": TABELA_HISTORICO
+                }
+            ).scalar()
+
+            if coluna_existe == 0:
+                return False
+
+            # ------------------------------------------------
+            # Procurar arquivo
+            # ------------------------------------------------
+
+            sql = text(
+                f"""
+                SELECT TOP 1
+                    ARQUIVO_ORIGEM
+                FROM dbo.{TABELA_HISTORICO}
+                WHERE ARQUIVO_ORIGEM = :arquivo
+                """
+            )
+
+            resultado = conn.execute(
+                sql,
+                {
+                    "arquivo": arquivo
+                }
+            ).fetchone()
+
+            return resultado is not None
+
+    except Exception as e:
+
+        log(
+            f"⚠️ Não foi possível verificar "
+            f"o histórico do arquivo {arquivo}: {e}"
+        )
+
+        return False
+
+
+# ============================================================
+# IMPORTAR HISTÓRICO
+#
+# DIFERENÇA:
+#
+# NÃO EXECUTA DELETE
+#
+# SOMENTE ADICIONA ARQUIVOS QUE AINDA NÃO FORAM IMPORTADOS
+# ============================================================
+
+def importar_historico():
+
+    # Impede dois eventos do Watchdog de importar
+    # o mesmo arquivo ao mesmo tempo
+    if not lock_historico.acquire(blocking=False):
+
+        log(
+            "⏳ Importação histórica já está em andamento."
+        )
+
+        return
+
+    try:
+
+        log(
+            "📚 Verificando novos arquivos "
+            "para ESTOQUE_HISTORICO..."
+        )
+
+        # ----------------------------------------------------
+        # Verificar pasta
+        # ----------------------------------------------------
+
+        if not os.path.exists(PASTA_EXCEL_HISTORICO):
+
+            log(
+                f"❌ Pasta histórica não encontrada: "
+                f"{PASTA_EXCEL_HISTORICO}"
+            )
+
+            return
+
+        # ----------------------------------------------------
+        # Listar XLSX
+        # ----------------------------------------------------
+
+        arquivos = [
+            f
+            for f in os.listdir(PASTA_EXCEL_HISTORICO)
+            if f.lower().endswith(".xlsx")
+            and not f.startswith("~$")
+        ]
+
+        arquivos.sort()
+
+        if not arquivos:
+
+            log(
+                "⚠️ Nenhum arquivo .xlsx encontrado "
+                "na pasta histórica."
+            )
+
+            return
+
+        quantidade_importada = 0
+        registros_importados = 0
+
+        # ----------------------------------------------------
+        # Percorrer arquivos
+        # ----------------------------------------------------
+
+        for arquivo in arquivos:
+
+            caminho = os.path.join(
+                PASTA_EXCEL_HISTORICO,
+                arquivo
+            )
+
+            # ------------------------------------------------
+            # Verificar se já foi importado
+            # ------------------------------------------------
+
+            if arquivo_historico_ja_importado(arquivo):
+
+                log(
+                    f"⏭️ Arquivo já existente no histórico: "
+                    f"{arquivo}"
+                )
+
+                continue
+
+            log(
+                f"📖 Importando novo histórico: {arquivo}"
+            )
+
+            try:
+
+                # --------------------------------------------
+                # Ler Excel
+                # --------------------------------------------
+
+                df = pd.read_excel(
+                    caminho,
+                    dtype=str
+                )
+
+                df = tratar_dataframe(df)
+
+                # --------------------------------------------
+                # Data do arquivo
+                #
+                # Utiliza a data de modificação do arquivo.
+                # Ela representará o dia do estoque.
+                # --------------------------------------------
+
+                timestamp_arquivo = os.path.getmtime(caminho)
+
+                data_estoque = datetime.fromtimestamp(
+                    timestamp_arquivo
+                ).date()
+
+                # --------------------------------------------
+                # Adicionar informações de histórico
+                # --------------------------------------------
+
+                df["ARQUIVO_ORIGEM"] = arquivo
+
+                df["DATA_ESTOQUE"] = pd.to_datetime(
+                    data_estoque
+                )
+
+                df["DATA_IMPORTACAO"] = pd.Timestamp.now()
+
+                # --------------------------------------------
+                # Importar
+                #
+                # IMPORTANTE:
+                # NÃO EXISTE DELETE AQUI
+                # --------------------------------------------
+
+                df.to_sql(
+                    TABELA_HISTORICO,
+                    engine,
+                    if_exists="append",
+                    index=False
+                )
+
+                quantidade_importada += 1
+                registros_importados += len(df)
+
+                log(
+                    f"✅ Histórico importado: "
+                    f"{arquivo} | "
+                    f"{len(df)} registros | "
+                    f"Data estoque: "
+                    f"{data_estoque.strftime('%d/%m/%Y')}"
+                )
+
+            except Exception as e:
+
+                log(
+                    f"❌ Erro no histórico {arquivo}: {e}"
+                )
+
+        # ----------------------------------------------------
+        # Final
+        # ----------------------------------------------------
+
+        if quantidade_importada == 0:
+
+            log(
+                "✅ Histórico já está atualizado. "
+                "Nenhum arquivo novo encontrado.\n"
+            )
+
+        else:
+
+            log(
+                f"🏁 Histórico atualizado! "
+                f"{quantidade_importada} arquivo(s) novo(s), "
+                f"{registros_importados} registro(s) "
+                f"adicionado(s).\n"
+            )
+
+    except Exception as e:
+
+        log(
+            f"❌ Erro durante importação histórica: {e}"
+        )
+
+    finally:
+
+        lock_historico.release()
+
+
+# ============================================================
+# BOTÕES MANUAIS
+# ============================================================
+
+def forcar_importacao():
+
+    threading.Thread(
+        target=importar_dados,
+        daemon=True
+    ).start()
+
+
+def forcar_importacao_historico():
+
+    threading.Thread(
+        target=importar_historico,
+        daemon=True
+    ).start()
+
+
+def importar_tudo():
+
+    def executar():
+
+        importar_dados()
+
+        importar_historico()
+
+    threading.Thread(
+        target=executar,
+        daemon=True
+    ).start()
+
+
+# ============================================================
+# MONITOR ESTOQUE ATUAL
+# ============================================================
+
+class MonitorExcelHandler(FileSystemEventHandler):
+
+    def on_any_event(self, event):
+
+        if event.is_directory:
+            return
+
+        if event.src_path.lower().endswith(".xlsx"):
+
+            log(
+                f"📢 Alteração detectada no "
+                f"ESTOQUE_ATUAL: {event.src_path}"
+            )
+
+            time.sleep(2)
+
+            importar_dados()
+
+
+# ============================================================
+# MONITOR HISTÓRICO
+# ============================================================
+
+class MonitorHistoricoHandler(FileSystemEventHandler):
+
+    def on_any_event(self, event):
+
+        if event.is_directory:
+            return
+
+        if event.src_path.lower().endswith(".xlsx"):
+
+            # Ignorar arquivo temporário do Excel
+            nome = os.path.basename(event.src_path)
+
+            if nome.startswith("~$"):
+                return
+
+            log(
+                f"📢 Novo/alterado arquivo detectado "
+                f"no histórico: {event.src_path}"
+            )
+
+            # Aguarda terminar a gravação do arquivo
+            time.sleep(3)
+
+            importar_historico()
+
+
+# ============================================================
+# INICIAR MONITORAMENTO ESTOQUE ATUAL
+# ============================================================
+
+def iniciar_monitoramento():
+
+    log(
+        f"👀 Monitorando ESTOQUE_ATUAL: "
+        f"{PASTA_EXCEL}"
+    )
+
+    event_handler = MonitorExcelHandler()
+
+    observer = Observer()
+
+    observer.schedule(
+        event_handler,
+        PASTA_EXCEL,
+        recursive=False
+    )
+
+    observer.start()
+
+    try:
+
+        while True:
+            time.sleep(5)
+
+    except KeyboardInterrupt:
+
+        observer.stop()
+
+    observer.join()
+
+
+# ============================================================
+# INICIAR MONITORAMENTO HISTÓRICO
+# ============================================================
+
+def iniciar_monitoramento_historico():
+
+    log(
+        f"👀 Monitorando ESTOQUE_HISTORICO: "
+        f"{PASTA_EXCEL_HISTORICO}"
+    )
+
+    event_handler = MonitorHistoricoHandler()
+
+    observer = Observer()
+
+    observer.schedule(
+        event_handler,
+        PASTA_EXCEL_HISTORICO,
+        recursive=False
+    )
+
+    observer.start()
+
+    try:
+
+        while True:
+            time.sleep(5)
+
+    except KeyboardInterrupt:
+
+        observer.stop()
+
+    observer.join()
+
+
+# ============================================================
+# INTERFACE TKINTER
+# ============================================================
+
+root = tk.Tk()
+
+root.title(
+    "Monitor de Importação - Estoque Atual + Histórico"
+)
+
+root.geometry(
+    "850x550"
+)
+
+# ============================================================
+# BOTÕES
+# ============================================================
+
+frame_buttons = tk.Frame(root)
+
+frame_buttons.pack(
+    pady=10
+)
+
+
+btn_importar = tk.Button(
+    frame_buttons,
+    text="⚙️ Atualizar ESTOQUE_ATUAL",
+    command=forcar_importacao,
+    bg="#0078D7",
+    fg="white",
+    font=("Segoe UI", 10, "bold"),
+    width=28
+)
+
+btn_importar.grid(
+    row=0,
+    column=0,
+    padx=5,
+    pady=5
+)
+
+
+btn_historico = tk.Button(
+    frame_buttons,
+    text="📚 Importar HISTÓRICO",
+    command=forcar_importacao_historico,
+    bg="#107C10",
+    fg="white",
+    font=("Segoe UI", 10, "bold"),
+    width=28
+)
+
+btn_historico.grid(
+    row=0,
+    column=1,
+    padx=5,
+    pady=5
+)
+
+
+btn_tudo = tk.Button(
+    frame_buttons,
+    text="🔄 Atualizar TUDO",
+    command=importar_tudo,
+    bg="#5C2D91",
+    fg="white",
+    font=("Segoe UI", 10, "bold"),
+    width=28
+)
+
+btn_tudo.grid(
+    row=1,
+    column=0,
+    columnspan=2,
+    padx=5,
+    pady=5
+)
+
+
+# ============================================================
+# LOG
+# ============================================================
+
+text_log = scrolledtext.ScrolledText(
+    root,
+    wrap=tk.WORD,
+    state=tk.DISABLED,
+    height=22,
+    font=("Consolas", 9)
+)
+
+text_log.pack(
+    padx=10,
+    pady=10,
+    fill=tk.BOTH,
+    expand=True
+)
+
+
+# ============================================================
+# INICIAR MONITORES
+# ============================================================
+
+threading.Thread(
+    target=iniciar_monitoramento,
+    daemon=True
+).start()
+
+
+threading.Thread(
+    target=iniciar_monitoramento_historico,
+    daemon=True
+).start()
+
+
+root.mainloop()

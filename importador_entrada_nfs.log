@@ -1,0 +1,1173 @@
+[10/09/2026 08:35:30] ======================================================================
+[10/09/2026 08:35:30] IMPORTADOR ENTRADA DE NFs
+[10/09/2026 08:35:30] Pasta: \\10.0.0.254\DADOS_CUSTOS_ENTRADA\
+[10/09/2026 08:35:30] SQL Server: 10.0.0.254
+[10/09/2026 08:35:30] Banco: FTECH
+[10/09/2026 08:35:30] ======================================================================
+[10/09/2026 08:35:30] 344 arquivo(s) encontrado(s).
+[10/09/2026 08:35:31] ERRO FATAL: ('28000', '[28000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Falha de logon. O logon é de um domínio não confiável e não pode ser usado com a autenticação integrada. (18452) (SQLDriverConnect); [28000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Falha de logon. O logon é de um domínio não confiável e não pode ser usado com a autenticação integrada. (18452)')
+[10/09/2026 08:35:31] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 565, in <module>
+    executar()
+    ~~~~~~~~^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 527, in executar
+    conn = conectar_sql()
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 122, in conectar_sql
+    return pyodbc.connect(conn_str, timeout=LOGIN_TIMEOUT, autocommit=False)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pyodbc.InterfaceError: ('28000', '[28000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Falha de logon. O logon é de um domínio não confiável e não pode ser usado com a autenticação integrada. (18452) (SQLDriverConnect); [28000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Falha de logon. O logon é de um domínio não confiável e não pode ser usado com a autenticação integrada. (18452)')
+
+[10/09/2026 08:41:16] Aplicativo iniciado.
+[10/09/2026 08:41:16] SQL Login está configurado como padrão para evitar o erro 18452 de domínio não confiável.
+[10/09/2026 08:41:28] Conexão SQL OK. Servidor: SERVER | Banco: FTECH
+[10/09/2026 08:41:35] Verificando 344 arquivo(s) na pasta.
+[10/09/2026 08:41:49] 344 arquivo(s) novo(s)/alterado(s) para importar.
+[10/09/2026 08:41:49] Detectado arquivo novo/alterado: 01.04.2025.xlsx
+[10/09/2026 08:41:51] ERRO ao importar 01.04.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:41:51] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:41:51] Detectado arquivo novo/alterado: 01.04.2026.xlsx
+[10/09/2026 08:41:53] ERRO ao importar 01.04.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:41:53] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:41:53] Detectado arquivo novo/alterado: 01.07.2025.xlsx
+[10/09/2026 08:41:55] ERRO ao importar 01.07.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:41:55] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:41:55] Detectado arquivo novo/alterado: 01.07.2026.xlsx
+[10/09/2026 08:41:57] ERRO ao importar 01.07.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:41:57] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:41:57] Detectado arquivo novo/alterado: 01.08.2025.xlsx
+[10/09/2026 08:42:00] ERRO ao importar 01.08.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:00] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:00] Detectado arquivo novo/alterado: 01.09.2025.xlsx
+[10/09/2026 08:42:02] ERRO ao importar 01.09.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:02] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:02] Detectado arquivo novo/alterado: 01.09.2026.xlsx
+[10/09/2026 08:42:04] ERRO ao importar 01.09.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:04] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:04] Detectado arquivo novo/alterado: 01.10.2025.xlsx
+[10/09/2026 08:42:06] ERRO ao importar 01.10.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:06] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:06] Detectado arquivo novo/alterado: 01.12.2025.xlsx
+[10/09/2026 08:42:08] ERRO ao importar 01.12.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:08] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:08] Detectado arquivo novo/alterado: 02.02.2026.xlsx
+[10/09/2026 08:42:10] ERRO ao importar 02.02.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:10] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:10] Detectado arquivo novo/alterado: 02.03.2026.xlsx
+[10/09/2026 08:42:13] ERRO ao importar 02.03.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:13] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:13] Detectado arquivo novo/alterado: 02.04.2025.xlsx
+[10/09/2026 08:42:15] ERRO ao importar 02.04.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:15] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:15] Detectado arquivo novo/alterado: 02.04.2026.xlsx
+[10/09/2026 08:42:17] ERRO ao importar 02.04.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:17] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:17] Detectado arquivo novo/alterado: 02.05.2025.xlsx
+[10/09/2026 08:42:28] Importado com sucesso: 02.05.2025.xlsx | 148 registro(s)
+[10/09/2026 08:42:28] Detectado arquivo novo/alterado: 02.06.2025.xlsx
+[10/09/2026 08:42:30] ERRO ao importar 02.06.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:30] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:30] Detectado arquivo novo/alterado: 02.06.2026.xlsx
+[10/09/2026 08:42:32] ERRO ao importar 02.06.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:32] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:32] Detectado arquivo novo/alterado: 02.07.2025.xlsx
+[10/09/2026 08:42:34] ERRO ao importar 02.07.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:34] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:34] Detectado arquivo novo/alterado: 02.073.xlsx
+[10/09/2026 08:42:36] ERRO ao importar 02.073.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:36] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:36] Detectado arquivo novo/alterado: 02.09.2025.xlsx
+[10/09/2026 08:42:38] ERRO ao importar 02.09.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:38] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:38] Detectado arquivo novo/alterado: 02.09.2026.xlsx
+[10/09/2026 08:42:43] ERRO ao importar 02.09.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:43] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:43] Detectado arquivo novo/alterado: 02.10.2025.xlsx
+[10/09/2026 08:42:45] ERRO ao importar 02.10.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:45] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:45] Detectado arquivo novo/alterado: 02.11.2025.xlsx
+[10/09/2026 08:42:48] ERRO ao importar 02.11.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:48] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:48] Detectado arquivo novo/alterado: 03.02.2026.xlsx
+[10/09/2026 08:42:50] ERRO ao importar 03.02.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:50] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:50] Detectado arquivo novo/alterado: 03.03.2025.xlsx
+[10/09/2026 08:42:52] ERRO ao importar 03.03.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:52] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:52] Detectado arquivo novo/alterado: 03.03.2026.xlsx
+[10/09/2026 08:42:54] ERRO ao importar 03.03.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:54] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:54] Detectado arquivo novo/alterado: 03.06.2025.xlsx
+[10/09/2026 08:42:56] ERRO ao importar 03.06.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:56] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:56] Detectado arquivo novo/alterado: 03.07.2025.xlsx
+[10/09/2026 08:42:59] ERRO ao importar 03.07.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:42:59] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:42:59] Detectado arquivo novo/alterado: 03.07.2026.xlsx
+[10/09/2026 08:43:01] ERRO ao importar 03.07.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:43:01] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:43:01] Detectado arquivo novo/alterado: 03.08.2026.xlsx
+[10/09/2026 08:43:03] ERRO ao importar 03.08.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:43:03] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:43:03] Detectado arquivo novo/alterado: 03.09.2025.xlsx
+[10/09/2026 08:43:05] ERRO ao importar 03.09.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:43:05] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:43:05] Detectado arquivo novo/alterado: 03.09.2026.xlsx
+[10/09/2026 08:43:08] ERRO ao importar 03.09.2026.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:43:08] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:43:08] Detectado arquivo novo/alterado: 03.10.2025.xlsx
+[10/09/2026 08:43:10] ERRO ao importar 03.10.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:43:10] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:43:10] Detectado arquivo novo/alterado: 03.11.2025.xlsx
+[10/09/2026 08:43:12] ERRO ao importar 03.11.2025.xlsx: unsupported operand type(s) for +: 'NoneType' and 'int'
+[10/09/2026 08:43:12] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1201, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1085, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 878, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 847, in montar_mapa_colunas
+    for col in range(1, ws.max_column + 1):
+                        ~~~~~~~~~~~~~~^~~
+TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'
+
+[10/09/2026 08:43:12] Detectado arquivo novo/alterado: 03.12.2025.xlsx
+[10/09/2026 08:50:44] Aplicativo iniciado.
+[10/09/2026 08:50:44] SQL Login carregado diretamente das credenciais configuradas no código.
+[10/09/2026 08:50:48] Conexão SQL OK. Servidor: SERVER | Banco: FTECH
+[10/09/2026 08:50:52] Verificando 344 arquivo(s) na pasta.
+[10/09/2026 08:51:06] 343 arquivo(s) novo(s)/alterado(s) para importar.
+[10/09/2026 08:51:06] Detectado arquivo novo/alterado: 01.04.2025.xlsx
+[10/09/2026 08:51:13] Importado com sucesso: 01.04.2025.xlsx | 120 registro(s)
+[10/09/2026 08:51:13] Detectado arquivo novo/alterado: 01.04.2026.xlsx
+[10/09/2026 09:18:06] Aplicativo iniciado.
+[10/09/2026 09:18:06] SQL Login carregado diretamente das credenciais configuradas no código.
+[10/09/2026 09:18:11] Conexão SQL OK. Servidor: SERVER | Banco: FTECH
+[10/09/2026 09:18:15] Verificando 344 arquivo(s) na pasta.
+[10/09/2026 09:18:26] 342 arquivo(s) novo(s)/alterado(s) para importar.
+[10/09/2026 09:18:26] Detectado arquivo novo/alterado: 01.04.2026.xlsx
+[10/09/2026 09:18:44] Importado com sucesso: 01.04.2026.xlsx | 156 registro(s)
+[10/09/2026 09:18:44] Detectado arquivo novo/alterado: 01.07.2025.xlsx
+[10/09/2026 09:19:08] Importado com sucesso: 01.07.2025.xlsx | 0 registro(s)
+[10/09/2026 09:19:08] Detectado arquivo novo/alterado: 01.07.2026.xlsx
+[10/09/2026 09:19:16] Importado com sucesso: 01.07.2026.xlsx | 64 registro(s)
+[10/09/2026 09:19:16] Detectado arquivo novo/alterado: 01.08.2025.xlsx
+[10/09/2026 09:20:12] Importado com sucesso: 01.08.2025.xlsx | 0 registro(s)
+[10/09/2026 09:20:12] Detectado arquivo novo/alterado: 01.09.2025.xlsx
+[10/09/2026 09:20:40] Importado com sucesso: 01.09.2025.xlsx | 0 registro(s)
+[10/09/2026 09:20:40] Detectado arquivo novo/alterado: 01.09.2026.xlsx
+[10/09/2026 09:21:16] Importado com sucesso: 01.09.2026.xlsx | 179 registro(s)
+[10/09/2026 09:21:16] Detectado arquivo novo/alterado: 01.10.2025.xlsx
+[10/09/2026 09:21:33] Importado com sucesso: 01.10.2025.xlsx | 0 registro(s)
+[10/09/2026 09:21:33] Detectado arquivo novo/alterado: 01.12.2025.xlsx
+[10/09/2026 09:22:12] Importado com sucesso: 01.12.2025.xlsx | 0 registro(s)
+[10/09/2026 09:22:12] Detectado arquivo novo/alterado: 02.02.2026.xlsx
+[10/09/2026 09:22:36] Importado com sucesso: 02.02.2026.xlsx | 150 registro(s)
+[10/09/2026 09:22:36] Detectado arquivo novo/alterado: 02.03.2026.xlsx
+[10/09/2026 09:22:51] Importado com sucesso: 02.03.2026.xlsx | 108 registro(s)
+[10/09/2026 09:22:51] Detectado arquivo novo/alterado: 02.04.2025.xlsx
+[10/09/2026 09:23:11] Importado com sucesso: 02.04.2025.xlsx | 0 registro(s)
+[10/09/2026 09:23:11] Detectado arquivo novo/alterado: 02.04.2026.xlsx
+[10/09/2026 09:23:49] Importado com sucesso: 02.04.2026.xlsx | 198 registro(s)
+[10/09/2026 09:23:49] Detectado arquivo novo/alterado: 02.06.2025.xlsx
+[10/09/2026 09:24:10] Importado com sucesso: 02.06.2025.xlsx | 0 registro(s)
+[10/09/2026 09:24:10] Detectado arquivo novo/alterado: 02.06.2026.xlsx
+[10/09/2026 09:24:26] Importado com sucesso: 02.06.2026.xlsx | 111 registro(s)
+[10/09/2026 09:24:26] Detectado arquivo novo/alterado: 02.07.2025.xlsx
+[10/09/2026 09:25:00] Importado com sucesso: 02.07.2025.xlsx | 0 registro(s)
+[10/09/2026 09:25:00] Detectado arquivo novo/alterado: 02.073.xlsx
+[10/09/2026 09:25:41] Importado com sucesso: 02.073.xlsx | 0 registro(s)
+[10/09/2026 09:25:41] Detectado arquivo novo/alterado: 02.09.2025.xlsx
+[10/09/2026 09:26:07] Importado com sucesso: 02.09.2025.xlsx | 0 registro(s)
+[10/09/2026 09:26:07] Detectado arquivo novo/alterado: 02.09.2026.xlsx
+[10/09/2026 09:26:20] ERRO ao importar 02.09.2026.xlsx: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+[10/09/2026 09:26:20] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+
+[10/09/2026 09:26:20] Detectado arquivo novo/alterado: 02.10.2025.xlsx
+[10/09/2026 09:26:31] Importado com sucesso: 02.10.2025.xlsx | 0 registro(s)
+[10/09/2026 09:26:31] Detectado arquivo novo/alterado: 02.11.2025.xlsx
+[10/09/2026 09:27:00] Importado com sucesso: 02.11.2025.xlsx | 0 registro(s)
+[10/09/2026 09:27:00] Detectado arquivo novo/alterado: 03.02.2026.xlsx
+[10/09/2026 09:27:08] Importado com sucesso: 03.02.2026.xlsx | 72 registro(s)
+[10/09/2026 09:27:08] Detectado arquivo novo/alterado: 03.03.2025.xlsx
+[10/09/2026 09:27:22] Importado com sucesso: 03.03.2025.xlsx | 0 registro(s)
+[10/09/2026 09:27:23] Detectado arquivo novo/alterado: 03.03.2026.xlsx
+[10/09/2026 09:27:44] Importado com sucesso: 03.03.2026.xlsx | 176 registro(s)
+[10/09/2026 09:27:44] Detectado arquivo novo/alterado: 03.06.2025.xlsx
+[10/09/2026 09:28:06] Importado com sucesso: 03.06.2025.xlsx | 0 registro(s)
+[10/09/2026 09:28:06] Detectado arquivo novo/alterado: 03.07.2025.xlsx
+[10/09/2026 09:28:31] Importado com sucesso: 03.07.2025.xlsx | 0 registro(s)
+[10/09/2026 09:28:31] Detectado arquivo novo/alterado: 03.07.2026.xlsx
+[10/09/2026 09:28:57] Importado com sucesso: 03.07.2026.xlsx | 169 registro(s)
+[10/09/2026 09:28:57] Detectado arquivo novo/alterado: 03.08.2026.xlsx
+[10/09/2026 09:29:31] Importado com sucesso: 03.08.2026.xlsx | 184 registro(s)
+[10/09/2026 09:29:31] Detectado arquivo novo/alterado: 03.09.2025.xlsx
+[10/09/2026 09:29:50] Importado com sucesso: 03.09.2025.xlsx | 0 registro(s)
+[10/09/2026 09:29:50] Detectado arquivo novo/alterado: 03.09.2026.xlsx
+[10/09/2026 09:30:08] Importado com sucesso: 03.09.2026.xlsx | 134 registro(s)
+[10/09/2026 09:30:08] Detectado arquivo novo/alterado: 03.10.2025.xlsx
+[10/09/2026 09:30:28] Importado com sucesso: 03.10.2025.xlsx | 0 registro(s)
+[10/09/2026 09:30:28] Detectado arquivo novo/alterado: 03.11.2025.xlsx
+[10/09/2026 09:30:42] Importado com sucesso: 03.11.2025.xlsx | 0 registro(s)
+[10/09/2026 09:30:42] Detectado arquivo novo/alterado: 03.12.2025.xlsx
+[10/09/2026 09:31:38] Importado com sucesso: 03.12.2025.xlsx | 0 registro(s)
+[10/09/2026 09:31:38] Detectado arquivo novo/alterado: 04.02.2026.xlsx
+[10/09/2026 09:33:37] Importado com sucesso: 04.02.2026.xlsx | 403 registro(s)
+[10/09/2026 09:33:37] Detectado arquivo novo/alterado: 04.03.2026.xlsx
+[10/09/2026 09:34:34] Importado com sucesso: 04.03.2026.xlsx | 257 registro(s)
+[10/09/2026 09:34:34] Detectado arquivo novo/alterado: 04.04.2025.xlsx
+[10/09/2026 09:35:53] Importado com sucesso: 04.04.2025.xlsx | 0 registro(s)
+[10/09/2026 09:35:53] Detectado arquivo novo/alterado: 04.05.2026.xlsx
+[10/09/2026 09:36:18] Importado com sucesso: 04.05.2026.xlsx | 137 registro(s)
+[10/09/2026 09:36:18] Detectado arquivo novo/alterado: 04.06.2025.xlsx
+[10/09/2026 09:36:40] Importado com sucesso: 04.06.2025.xlsx | 0 registro(s)
+[10/09/2026 09:36:40] Detectado arquivo novo/alterado: 04.07.2025.xlsx
+[10/09/2026 09:37:16] Importado com sucesso: 04.07.2025.xlsx | 0 registro(s)
+[10/09/2026 09:37:16] Detectado arquivo novo/alterado: 04.08.2026.xlsx
+[10/09/2026 09:37:39] Importado com sucesso: 04.08.2026.xlsx | 147 registro(s)
+[10/09/2026 09:37:40] Detectado arquivo novo/alterado: 04.09.2025.xlsx
+[10/09/2026 09:37:52] Importado com sucesso: 04.09.2025.xlsx | 0 registro(s)
+[10/09/2026 09:37:52] Detectado arquivo novo/alterado: 04.11.2025.xlsx
+[10/09/2026 09:38:00] Importado com sucesso: 04.11.2025.xlsx | 0 registro(s)
+[10/09/2026 09:38:00] Detectado arquivo novo/alterado: 04.12.2025.xlsx
+[10/09/2026 09:38:41] Importado com sucesso: 04.12.2025.xlsx | 0 registro(s)
+[10/09/2026 09:38:41] Detectado arquivo novo/alterado: 05.02.2026.xlsx
+[10/09/2026 09:39:24] Importado com sucesso: 05.02.2026.xlsx | 240 registro(s)
+[10/09/2026 09:39:24] Detectado arquivo novo/alterado: 05.05.2025.xlsx
+[10/09/2026 09:39:33] Importado com sucesso: 05.05.2025.xlsx | 0 registro(s)
+[10/09/2026 09:39:33] Detectado arquivo novo/alterado: 05.05.2026.xlsx
+[10/09/2026 09:39:48] Importado com sucesso: 05.05.2026.xlsx | 121 registro(s)
+[10/09/2026 09:39:48] Detectado arquivo novo/alterado: 05.06.2025.xlsx
+[10/09/2026 09:40:30] Importado com sucesso: 05.06.2025.xlsx | 0 registro(s)
+[10/09/2026 09:40:30] Detectado arquivo novo/alterado: 05.06.2026.xlsx
+[10/09/2026 09:40:50] Importado com sucesso: 05.06.2026.xlsx | 150 registro(s)
+[10/09/2026 09:40:50] Detectado arquivo novo/alterado: 05.08.2025.xlsx
+[10/09/2026 09:41:09] Importado com sucesso: 05.08.2025.xlsx | 0 registro(s)
+[10/09/2026 09:41:09] Detectado arquivo novo/alterado: 05.08.2026.xlsx
+[10/09/2026 09:41:22] Importado com sucesso: 05.08.2026.xlsx | 116 registro(s)
+[10/09/2026 09:41:22] Detectado arquivo novo/alterado: 05.11.2025.xlsx
+[10/09/2026 09:41:34] Importado com sucesso: 05.11.2025.xlsx | 0 registro(s)
+[10/09/2026 09:41:34] Detectado arquivo novo/alterado: 05.12.2025.xlsx
+[10/09/2026 09:42:10] Importado com sucesso: 05.12.2025.xlsx | 0 registro(s)
+[10/09/2026 09:42:10] Detectado arquivo novo/alterado: 06.02.2026.xlsx
+[10/09/2026 09:42:51] Importado com sucesso: 06.02.2026.xlsx | 220 registro(s)
+[10/09/2026 09:42:51] Detectado arquivo novo/alterado: 06.03.2026.xlsx
+[10/09/2026 09:43:11] Importado com sucesso: 06.03.2026.xlsx | 143 registro(s)
+[10/09/2026 09:43:11] Detectado arquivo novo/alterado: 06.04.2026.xlsx
+[10/09/2026 09:43:41] Importado com sucesso: 06.04.2026.xlsx | 181 registro(s)
+[10/09/2026 09:43:41] Detectado arquivo novo/alterado: 06.05.2025.xlsx
+[10/09/2026 09:44:01] Importado com sucesso: 06.05.2025.xlsx | 0 registro(s)
+[10/09/2026 09:44:01] Detectado arquivo novo/alterado: 06.05.2026.xlsx
+[10/09/2026 09:44:11] Importado com sucesso: 06.05.2026.xlsx | 94 registro(s)
+[10/09/2026 09:44:11] Detectado arquivo novo/alterado: 06.06.2025.xlsx
+[10/09/2026 09:44:34] Importado com sucesso: 06.06.2025.xlsx | 0 registro(s)
+[10/09/2026 09:44:34] Detectado arquivo novo/alterado: 06.07.2026.xlsx
+[10/09/2026 09:44:53] Importado com sucesso: 06.07.2026.xlsx | 127 registro(s)
+[10/09/2026 09:44:53] Detectado arquivo novo/alterado: 06.08.2025.xlsx
+[10/09/2026 09:45:04] Importado com sucesso: 06.08.2025.xlsx | 0 registro(s)
+[10/09/2026 09:45:04] Detectado arquivo novo/alterado: 06.10.2025.xlsx
+[10/09/2026 09:46:05] Importado com sucesso: 06.10.2025.xlsx | 0 registro(s)
+[10/09/2026 09:46:05] Detectado arquivo novo/alterado: 06.11.2025.xlsx
+[10/09/2026 09:46:28] Importado com sucesso: 06.11.2025.xlsx | 0 registro(s)
+[10/09/2026 09:46:28] Detectado arquivo novo/alterado: 07.04.2025.xlsx
+[10/09/2026 09:46:49] Importado com sucesso: 07.04.2025.xlsx | 0 registro(s)
+[10/09/2026 09:46:49] Detectado arquivo novo/alterado: 07.04.2026.xlsx
+[10/09/2026 09:47:07] Importado com sucesso: 07.04.2026.xlsx | 129 registro(s)
+[10/09/2026 09:47:07] Detectado arquivo novo/alterado: 07.05.2025.xlsx
+[10/09/2026 09:47:21] Importado com sucesso: 07.05.2025.xlsx | 0 registro(s)
+[10/09/2026 09:47:21] Detectado arquivo novo/alterado: 07.05.2026.xlsx
+[10/09/2026 09:47:55] Importado com sucesso: 07.05.2026.xlsx | 190 registro(s)
+[10/09/2026 09:47:55] Detectado arquivo novo/alterado: 07.07.2025.xlsx
+[10/09/2026 09:48:16] Importado com sucesso: 07.07.2025.xlsx | 0 registro(s)
+[10/09/2026 09:48:16] Detectado arquivo novo/alterado: 07.07.2026.xlsx
+[10/09/2026 09:48:23] Importado com sucesso: 07.07.2026.xlsx | 74 registro(s)
+[10/09/2026 09:48:23] Detectado arquivo novo/alterado: 07.08.2025.xlsx
+[10/09/2026 09:48:40] Importado com sucesso: 07.08.2025.xlsx | 0 registro(s)
+[10/09/2026 09:48:40] Detectado arquivo novo/alterado: 07.08.2026.xlsx
+[10/09/2026 09:48:53] Importado com sucesso: 07.08.2026.xlsx | 115 registro(s)
+[10/09/2026 09:48:53] Detectado arquivo novo/alterado: 07.09.2026.xlsx
+[10/09/2026 09:48:56] Importado com sucesso: 07.09.2026.xlsx | 0 registro(s)
+[10/09/2026 09:48:56] Detectado arquivo novo/alterado: 07.10.2025.xlsx
+[10/09/2026 09:49:30] Importado com sucesso: 07.10.2025.xlsx | 0 registro(s)
+[10/09/2026 09:49:30] Detectado arquivo novo/alterado: 07.11.2025.xlsx
+[10/09/2026 09:50:07] Importado com sucesso: 07.11.2025.xlsx | 0 registro(s)
+[10/09/2026 09:50:07] Detectado arquivo novo/alterado: 08.04.2026.xlsx
+[10/09/2026 09:50:34] Importado com sucesso: 08.04.2026.xlsx | 183 registro(s)
+[10/09/2026 09:50:34] Detectado arquivo novo/alterado: 08.05.2025.xlsx
+[10/09/2026 09:51:06] Importado com sucesso: 08.05.2025.xlsx | 0 registro(s)
+[10/09/2026 09:51:06] Detectado arquivo novo/alterado: 08.05.2026.xlsx
+[10/09/2026 09:51:21] Importado com sucesso: 08.05.2026.xlsx | 120 registro(s)
+[10/09/2026 09:51:21] Detectado arquivo novo/alterado: 08.06.2026.xlsx
+[10/09/2026 09:51:57] Importado com sucesso: 08.06.2026.xlsx | 207 registro(s)
+[10/09/2026 09:51:57] Detectado arquivo novo/alterado: 08.07.2025.xlsx
+[10/09/2026 09:52:17] Importado com sucesso: 08.07.2025.xlsx | 0 registro(s)
+[10/09/2026 09:52:17] Detectado arquivo novo/alterado: 08.07.2026.xlsx
+[10/09/2026 09:52:36] Importado com sucesso: 08.07.2026.xlsx | 139 registro(s)
+[10/09/2026 09:52:36] Detectado arquivo novo/alterado: 08.08.2025.xlsx
+[10/09/2026 09:52:56] Importado com sucesso: 08.08.2025.xlsx | 0 registro(s)
+[10/09/2026 09:52:56] Detectado arquivo novo/alterado: 08.09.2025.xlsx
+[10/09/2026 09:53:00] Importado com sucesso: 08.09.2025.xlsx | 0 registro(s)
+[10/09/2026 09:53:00] Detectado arquivo novo/alterado: 08.09.2026.xlsx
+[10/09/2026 09:53:21] Importado com sucesso: 08.09.2026.xlsx | 139 registro(s)
+[10/09/2026 09:53:21] Detectado arquivo novo/alterado: 08.10.2025.xlsx
+[10/09/2026 09:53:33] Importado com sucesso: 08.10.2025.xlsx | 0 registro(s)
+[10/09/2026 09:53:33] Detectado arquivo novo/alterado: 08.12.2025.xlsx
+[10/09/2026 09:53:59] Importado com sucesso: 08.12.2025.xlsx | 0 registro(s)
+[10/09/2026 09:53:59] Detectado arquivo novo/alterado: 09.02.2026.xlsx
+[10/09/2026 09:54:37] Importado com sucesso: 09.02.2026.xlsx | 198 registro(s)
+[10/09/2026 09:54:37] Detectado arquivo novo/alterado: 09.03.2026.xlsx
+[10/09/2026 09:55:07] Importado com sucesso: 09.03.2026.xlsx | 186 registro(s)
+[10/09/2026 09:55:07] Detectado arquivo novo/alterado: 09.04.2025.xlsx
+[10/09/2026 09:55:18] Importado com sucesso: 09.04.2025.xlsx | 0 registro(s)
+[10/09/2026 09:55:18] Detectado arquivo novo/alterado: 09.04.2026.xlsx
+[10/09/2026 09:55:32] Importado com sucesso: 09.04.2026.xlsx | 114 registro(s)
+[10/09/2026 09:55:32] Detectado arquivo novo/alterado: 09.05.2025.xlsx
+[10/09/2026 09:56:23] Importado com sucesso: 09.05.2025.xlsx | 0 registro(s)
+[10/09/2026 09:56:23] Detectado arquivo novo/alterado: 09.06.2025.xlsx
+[10/09/2026 09:56:47] Importado com sucesso: 09.06.2025.xlsx | 0 registro(s)
+[10/09/2026 09:56:47] Detectado arquivo novo/alterado: 09.07.2025.xlsx
+[10/09/2026 09:56:50] ERRO ao importar 09.07.2025.xlsx: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+[10/09/2026 09:56:50] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+
+[10/09/2026 09:56:50] Detectado arquivo novo/alterado: 09.07.2026.xlsx
+[10/09/2026 09:56:58] Importado com sucesso: 09.07.2026.xlsx | 72 registro(s)
+[10/09/2026 09:56:58] Detectado arquivo novo/alterado: 09.08.2025.xlsx
+[10/09/2026 09:57:02] Importado com sucesso: 09.08.2025.xlsx | 0 registro(s)
+[10/09/2026 09:57:02] Detectado arquivo novo/alterado: 09.09.2026.xlsx
+[10/09/2026 09:57:20] Importado com sucesso: 09.09.2026.xlsx | 136 registro(s)
+[10/09/2026 09:57:20] Detectado arquivo novo/alterado: 09.10.2025.xlsx
+[10/09/2026 09:57:42] Importado com sucesso: 09.10.2025.xlsx | 0 registro(s)
+[10/09/2026 09:57:42] Detectado arquivo novo/alterado: 09.12.2025.xlsx
+[10/09/2026 09:57:54] Importado com sucesso: 09.12.2025.xlsx | 0 registro(s)
+[10/09/2026 09:57:54] Detectado arquivo novo/alterado: 10.02.2026.xlsx
+[10/09/2026 09:58:17] Importado com sucesso: 10.02.2026.xlsx | 154 registro(s)
+[10/09/2026 09:58:17] Detectado arquivo novo/alterado: 10.03.2026.xlsx
+[10/09/2026 09:58:47] Importado com sucesso: 10.03.2026.xlsx | 178 registro(s)
+[10/09/2026 09:58:47] Detectado arquivo novo/alterado: 10.04.2025.xlsx
+[10/09/2026 09:59:03] Importado com sucesso: 10.04.2025.xlsx | 0 registro(s)
+[10/09/2026 09:59:03] Detectado arquivo novo/alterado: 10.04.2026.xlsx
+[10/09/2026 09:59:26] Importado com sucesso: 10.04.2026.xlsx | 142 registro(s)
+[10/09/2026 09:59:26] Detectado arquivo novo/alterado: 10.06.2025.xlsx
+[10/09/2026 09:59:41] Importado com sucesso: 10.06.2025.xlsx | 0 registro(s)
+[10/09/2026 09:59:41] Detectado arquivo novo/alterado: 10.06.2026.xlsx
+[10/09/2026 10:00:00] Importado com sucesso: 10.06.2026.xlsx | 139 registro(s)
+[10/09/2026 10:00:00] Detectado arquivo novo/alterado: 10.07.2025.xlsx
+[10/09/2026 10:00:14] Importado com sucesso: 10.07.2025.xlsx | 0 registro(s)
+[10/09/2026 10:00:14] Detectado arquivo novo/alterado: 10.07.2026.xlsx
+[10/09/2026 10:00:21] Importado com sucesso: 10.07.2026.xlsx | 75 registro(s)
+[10/09/2026 10:00:21] Detectado arquivo novo/alterado: 10.08.2026.xlsx
+[10/09/2026 10:01:32] Importado com sucesso: 10.08.2026.xlsx | 266 registro(s)
+[10/09/2026 10:01:32] Detectado arquivo novo/alterado: 10.09.2025.xlsx
+[10/09/2026 10:01:55] Importado com sucesso: 10.09.2025.xlsx | 0 registro(s)
+[10/09/2026 10:01:55] Detectado arquivo novo/alterado: 10.10.2025.xlsx
+[10/09/2026 10:01:57] ERRO ao importar 10.10.2025.xlsx: Colunas não encontradas: TIPO, DATA, SALDO_ATUAL, QTD_ENTRADA
+[10/09/2026 10:01:58] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: TIPO, DATA, SALDO_ATUAL, QTD_ENTRADA
+
+[10/09/2026 10:01:58] Detectado arquivo novo/alterado: 10.11.2025.xlsx
+[10/09/2026 10:02:13] Importado com sucesso: 10.11.2025.xlsx | 0 registro(s)
+[10/09/2026 10:02:13] Detectado arquivo novo/alterado: 10.12.2025.xlsx
+[10/09/2026 10:02:21] Importado com sucesso: 10.12.2025.xlsx | 0 registro(s)
+[10/09/2026 10:02:21] Detectado arquivo novo/alterado: 11.02.2026.xlsx
+[10/09/2026 10:02:54] Importado com sucesso: 11.02.2026.xlsx | 200 registro(s)
+[10/09/2026 10:02:54] Detectado arquivo novo/alterado: 11.03.2026.xlsx
+[10/09/2026 10:03:48] Importado com sucesso: 11.03.2026.xlsx | 272 registro(s)
+[10/09/2026 10:03:48] Detectado arquivo novo/alterado: 11.04.2025.xlsx
+[10/09/2026 10:04:05] Importado com sucesso: 11.04.2025.xlsx | 0 registro(s)
+[10/09/2026 10:04:05] Detectado arquivo novo/alterado: 11.05.2026.xlsx
+[10/09/2026 10:04:34] Importado com sucesso: 11.05.2026.xlsx | 175 registro(s)
+[10/09/2026 10:04:34] Detectado arquivo novo/alterado: 11.06.2025.xlsx
+[10/09/2026 10:04:44] Importado com sucesso: 11.06.2025.xlsx | 0 registro(s)
+[10/09/2026 10:04:44] Detectado arquivo novo/alterado: 11.06.2026.xlsx
+[10/09/2026 10:05:01] Importado com sucesso: 11.06.2026.xlsx | 127 registro(s)
+[10/09/2026 10:05:01] Detectado arquivo novo/alterado: 11.07.2025.xlsx
+[10/09/2026 10:05:22] Importado com sucesso: 11.07.2025.xlsx | 0 registro(s)
+[10/09/2026 10:05:22] Detectado arquivo novo/alterado: 11.08.2025.xlsx
+[10/09/2026 10:05:34] Importado com sucesso: 11.08.2025.xlsx | 0 registro(s)
+[10/09/2026 10:05:34] Detectado arquivo novo/alterado: 11.08.2026.xlsx
+[10/09/2026 10:07:34] Importado com sucesso: 11.08.2026.xlsx | 401 registro(s)
+[10/09/2026 10:07:34] Detectado arquivo novo/alterado: 11.09.2025.xlsx
+[10/09/2026 10:08:22] Importado com sucesso: 11.09.2025.xlsx | 0 registro(s)
+[10/09/2026 10:08:22] Detectado arquivo novo/alterado: 11.11.2025.xlsx
+[10/09/2026 10:08:47] Importado com sucesso: 11.11.2025.xlsx | 0 registro(s)
+[10/09/2026 10:08:47] Detectado arquivo novo/alterado: 11.12.2025.xlsx
+[10/09/2026 10:09:30] Importado com sucesso: 11.12.2025.xlsx | 0 registro(s)
+[10/09/2026 10:09:30] Detectado arquivo novo/alterado: 12.01.2026.xlsx
+[10/09/2026 10:10:13] Importado com sucesso: 12.01.2026.xlsx | 218 registro(s)
+[10/09/2026 10:10:13] Detectado arquivo novo/alterado: 12.02.2026.xlsx
+[10/09/2026 10:10:36] Importado com sucesso: 12.02.2026.xlsx | 153 registro(s)
+[10/09/2026 10:10:36] Detectado arquivo novo/alterado: 12.03.2026.xlsx
+[10/09/2026 10:11:05] Importado com sucesso: 12.03.2026.xlsx | 172 registro(s)
+[10/09/2026 10:11:05] Detectado arquivo novo/alterado: 12.05.2025.xlsx
+[10/09/2026 10:11:23] Importado com sucesso: 12.05.2025.xlsx | 0 registro(s)
+[10/09/2026 10:11:23] Detectado arquivo novo/alterado: 12.05.2026.xlsx
+[10/09/2026 10:12:57] Importado com sucesso: 12.05.2026.xlsx | 339 registro(s)
+[10/09/2026 10:12:57] Detectado arquivo novo/alterado: 12.06.2025.xlsx
+[10/09/2026 10:13:24] Importado com sucesso: 12.06.2025.xlsx | 0 registro(s)
+[10/09/2026 10:13:24] Detectado arquivo novo/alterado: 12.06.2026.xlsx
+[10/09/2026 10:13:44] Importado com sucesso: 12.06.2026.xlsx | 140 registro(s)
+[10/09/2026 10:13:44] Detectado arquivo novo/alterado: 12.08.2025.xlsx
+[10/09/2026 10:14:39] Importado com sucesso: 12.08.2025.xlsx | 0 registro(s)
+[10/09/2026 10:14:39] Detectado arquivo novo/alterado: 12.08.2026.xlsx
+[10/09/2026 10:15:19] Importado com sucesso: 12.08.2026.xlsx | 201 registro(s)
+[10/09/2026 10:15:19] Detectado arquivo novo/alterado: 12.09.2025.xlsx
+[10/09/2026 10:15:50] Importado com sucesso: 12.09.2025.xlsx | 0 registro(s)
+[10/09/2026 10:15:50] Detectado arquivo novo/alterado: 12.11.2025.xlsx
+[10/09/2026 10:16:14] Importado com sucesso: 12.11.2025.xlsx | 0 registro(s)
+[10/09/2026 10:16:14] Detectado arquivo novo/alterado: 12.12.2025.xlsx
+[10/09/2026 10:17:03] Importado com sucesso: 12.12.2025.xlsx | 0 registro(s)
+[10/09/2026 10:17:03] Detectado arquivo novo/alterado: 13.01.2026.xlsx
+[10/09/2026 10:17:17] Importado com sucesso: 13.01.2026.xlsx | 107 registro(s)
+[10/09/2026 10:17:17] Detectado arquivo novo/alterado: 13.02.2026.xlsx
+[10/09/2026 10:18:50] Importado com sucesso: 13.02.2026.xlsx | 357 registro(s)
+[10/09/2026 10:18:50] Detectado arquivo novo/alterado: 13.03.2025.xlsx
+[10/09/2026 10:19:15] Importado com sucesso: 13.03.2025.xlsx | 0 registro(s)
+[10/09/2026 10:19:15] Detectado arquivo novo/alterado: 13.03.2026.xlsx
+[10/09/2026 10:19:40] Importado com sucesso: 13.03.2026.xlsx | 157 registro(s)
+[10/09/2026 10:19:40] Detectado arquivo novo/alterado: 13.04.2026.xlsx
+[10/09/2026 10:20:10] Importado com sucesso: 13.04.2026.xlsx | 171 registro(s)
+[10/09/2026 10:20:10] Detectado arquivo novo/alterado: 13.05.2026.xlsx
+[10/09/2026 10:20:35] Importado com sucesso: 13.05.2026.xlsx | 143 registro(s)
+[10/09/2026 10:20:35] Detectado arquivo novo/alterado: 13.06.2026.xlsx
+[10/09/2026 10:20:48] ERRO ao importar 13.06.2026.xlsx: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+[10/09/2026 10:20:48] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+
+[10/09/2026 10:20:48] Detectado arquivo novo/alterado: 13.07.2026.xlsx
+[10/09/2026 10:21:10] Importado com sucesso: 13.07.2026.xlsx | 140 registro(s)
+[10/09/2026 10:21:10] Detectado arquivo novo/alterado: 13.08.2025.xlsx
+[10/09/2026 10:21:34] Importado com sucesso: 13.08.2025.xlsx | 0 registro(s)
+[10/09/2026 10:21:34] Detectado arquivo novo/alterado: 13.08.2026.xlsx
+[10/09/2026 10:21:53] Importado com sucesso: 13.08.2026.xlsx | 146 registro(s)
+[10/09/2026 10:21:53] Detectado arquivo novo/alterado: 13.10.2025.xlsx
+[10/09/2026 10:22:19] Importado com sucesso: 13.10.2025.xlsx | 0 registro(s)
+[10/09/2026 10:22:19] Detectado arquivo novo/alterado: 13.11.2025.xlsx
+[10/09/2026 10:22:33] Importado com sucesso: 13.11.2025.xlsx | 0 registro(s)
+[10/09/2026 10:22:33] Detectado arquivo novo/alterado: 14.01.2026.xlsx
+[10/09/2026 10:23:42] Importado com sucesso: 14.01.2026.xlsx | 313 registro(s)
+[10/09/2026 10:23:42] Detectado arquivo novo/alterado: 14.04.2025.xlsx
+[10/09/2026 10:24:16] Importado com sucesso: 14.04.2025.xlsx | 0 registro(s)
+[10/09/2026 10:24:16] Detectado arquivo novo/alterado: 14.04.2026.xlsx
+[10/09/2026 10:24:28] Importado com sucesso: 14.04.2026.xlsx | 107 registro(s)
+[10/09/2026 10:24:28] Detectado arquivo novo/alterado: 14.05.2025.xlsx
+[10/09/2026 10:24:48] Importado com sucesso: 14.05.2025.xlsx | 0 registro(s)
+[10/09/2026 10:24:48] Detectado arquivo novo/alterado: 14.05.2026.xlsx
+[10/09/2026 10:25:30] Importado com sucesso: 14.05.2026.xlsx | 228 registro(s)
+[10/09/2026 10:25:30] Detectado arquivo novo/alterado: 14.07.2025.xlsx
+[10/09/2026 10:26:16] Importado com sucesso: 14.07.2025.xlsx | 0 registro(s)
+[10/09/2026 10:26:16] Detectado arquivo novo/alterado: 14.07.2026.xlsx
+[10/09/2026 10:26:28] Importado com sucesso: 14.07.2026.xlsx | 108 registro(s)
+[10/09/2026 10:26:28] Detectado arquivo novo/alterado: 14.08.2025.xlsx
+[10/09/2026 10:26:38] Importado com sucesso: 14.08.2025.xlsx | 0 registro(s)
+[10/09/2026 10:26:38] Detectado arquivo novo/alterado: 14.08.2026.xlsx
+[10/09/2026 10:26:50] Importado com sucesso: 14.08.2026.xlsx | 102 registro(s)
+[10/09/2026 10:26:50] Detectado arquivo novo/alterado: 14.10.2025.xlsx
+[10/09/2026 10:27:30] Importado com sucesso: 14.10.2025.xlsx | 0 registro(s)
+[10/09/2026 10:27:30] Detectado arquivo novo/alterado: 14.11.2025.xlsx
+[10/09/2026 10:27:59] Importado com sucesso: 14.11.2025.xlsx | 0 registro(s)
+[10/09/2026 10:27:59] Detectado arquivo novo/alterado: 15,05,2026.xlsx
+[10/09/2026 10:28:24] Importado com sucesso: 15,05,2026.xlsx | 153 registro(s)
+[10/09/2026 10:28:24] Detectado arquivo novo/alterado: 15.01.2026.xlsx
+[10/09/2026 10:30:31] Importado com sucesso: 15.01.2026.xlsx | 413 registro(s)
+[10/09/2026 10:30:31] Detectado arquivo novo/alterado: 15.04.2025.xlsx
+[10/09/2026 10:30:59] Importado com sucesso: 15.04.2025.xlsx | 0 registro(s)
+[10/09/2026 10:30:59] Detectado arquivo novo/alterado: 15.04.2026.xlsx
+[10/09/2026 10:31:10] Importado com sucesso: 15.04.2026.xlsx | 97 registro(s)
+[10/09/2026 10:31:10] Detectado arquivo novo/alterado: 15.05.2025.xlsx
+[10/09/2026 10:31:24] Importado com sucesso: 15.05.2025.xlsx | 0 registro(s)
+[10/09/2026 10:31:24] Detectado arquivo novo/alterado: 15.06.2026.xlsx
+[10/09/2026 10:31:38] Importado com sucesso: 15.06.2026.xlsx | 116 registro(s)
+[10/09/2026 10:31:38] Detectado arquivo novo/alterado: 15.07.2025.xlsx
+[10/09/2026 10:32:04] Importado com sucesso: 15.07.2025.xlsx | 0 registro(s)
+[10/09/2026 10:32:04] Detectado arquivo novo/alterado: 15.08.2025.xlsx
+[10/09/2026 10:32:20] Importado com sucesso: 15.08.2025.xlsx | 0 registro(s)
+[10/09/2026 10:32:20] Detectado arquivo novo/alterado: 15.09.2025.xlsx
+[10/09/2026 10:32:32] Importado com sucesso: 15.09.2025.xlsx | 0 registro(s)
+[10/09/2026 10:32:32] Detectado arquivo novo/alterado: 15.12.2025.xlsx
+[10/09/2026 10:32:56] Importado com sucesso: 15.12.2025.xlsx | 0 registro(s)
+[10/09/2026 10:32:56] Detectado arquivo novo/alterado: 16.01.2026.xlsx
+[10/09/2026 10:33:15] Importado com sucesso: 16.01.2026.xlsx | 148 registro(s)
+[10/09/2026 10:33:15] Detectado arquivo novo/alterado: 16.02.2026.xlsx
+[10/09/2026 10:33:23] Importado com sucesso: 16.02.2026.xlsx | 76 registro(s)
+[10/09/2026 10:33:23] Detectado arquivo novo/alterado: 16.03.2026.xlsx
+[10/09/2026 10:33:54] Importado com sucesso: 16.03.2026.xlsx | 192 registro(s)
+[10/09/2026 10:33:54] Detectado arquivo novo/alterado: 16.04.2025.xlsx
+[10/09/2026 10:36:16] Importado com sucesso: 16.04.2025.xlsx | 0 registro(s)
+[10/09/2026 10:36:16] Detectado arquivo novo/alterado: 16.04.2026.xlsx
+[10/09/2026 10:36:56] Importado com sucesso: 16.04.2026.xlsx | 229 registro(s)
+[10/09/2026 10:36:56] Detectado arquivo novo/alterado: 16.05.2025.xlsx
+[10/09/2026 10:37:30] Importado com sucesso: 16.05.2025.xlsx | 0 registro(s)
+[10/09/2026 10:37:30] Detectado arquivo novo/alterado: 16.06.2025.xlsx
+[10/09/2026 10:37:41] Importado com sucesso: 16.06.2025.xlsx | 0 registro(s)
+[10/09/2026 10:37:41] Detectado arquivo novo/alterado: 16.06.2026.xlsx
+[10/09/2026 10:37:56] Importado com sucesso: 16.06.2026.xlsx | 124 registro(s)
+[10/09/2026 10:37:56] Detectado arquivo novo/alterado: 16.07.2025.xlsx
+[10/09/2026 10:38:08] Importado com sucesso: 16.07.2025.xlsx | 0 registro(s)
+[10/09/2026 10:38:08] Detectado arquivo novo/alterado: 16.07.2026.xlsx
+[10/09/2026 10:38:32] Importado com sucesso: 16.07.2026.xlsx | 171 registro(s)
+[10/09/2026 10:38:32] Detectado arquivo novo/alterado: 16.09.2025.xlsx
+[10/09/2026 10:38:48] Importado com sucesso: 16.09.2025.xlsx | 0 registro(s)
+[10/09/2026 10:38:48] Detectado arquivo novo/alterado: 16.10.2025.xlsx
+[10/09/2026 10:39:23] Importado com sucesso: 16.10.2025.xlsx | 0 registro(s)
+[10/09/2026 10:39:23] Detectado arquivo novo/alterado: 16.12.2025.xlsx
+[10/09/2026 10:39:46] Importado com sucesso: 16.12.2025.xlsx | 0 registro(s)
+[10/09/2026 10:39:46] Detectado arquivo novo/alterado: 17.02.2026.xlsx
+[10/09/2026 10:39:48] Importado com sucesso: 17.02.2026.xlsx | 0 registro(s)
+[10/09/2026 10:39:48] Detectado arquivo novo/alterado: 17.03.2026.xlsx
+[10/09/2026 10:40:30] Importado com sucesso: 17.03.2026.xlsx | 220 registro(s)
+[10/09/2026 10:40:30] Detectado arquivo novo/alterado: 17.04.2025.xlsx
+[10/09/2026 10:41:20] Importado com sucesso: 17.04.2025.xlsx | 0 registro(s)
+[10/09/2026 10:41:20] Detectado arquivo novo/alterado: 17.06.2025.xlsx
+[10/09/2026 10:41:28] Importado com sucesso: 17.06.2025.xlsx | 0 registro(s)
+[10/09/2026 10:41:28] Detectado arquivo novo/alterado: 17.06.2026.xlsx
+[10/09/2026 10:41:54] Importado com sucesso: 17.06.2026.xlsx | 166 registro(s)
+[10/09/2026 10:41:54] Detectado arquivo novo/alterado: 17.07.2025.xlsx
+[10/09/2026 10:42:11] Importado com sucesso: 17.07.2025.xlsx | 0 registro(s)
+[10/09/2026 10:42:11] Detectado arquivo novo/alterado: 17.07.2026.xlsx
+[10/09/2026 10:42:36] Importado com sucesso: 17.07.2026.xlsx | 138 registro(s)
+[10/09/2026 10:42:36] Detectado arquivo novo/alterado: 17.08.2026.xlsx
+[10/09/2026 10:43:28] Importado com sucesso: 17.08.2026.xlsx | 260 registro(s)
+[10/09/2026 10:43:28] Detectado arquivo novo/alterado: 17.09.2025.xlsx
+[10/09/2026 10:43:45] Importado com sucesso: 17.09.2025.xlsx | 0 registro(s)
+[10/09/2026 10:43:45] Detectado arquivo novo/alterado: 17.10.2025.xlsx
+[10/09/2026 10:45:07] Importado com sucesso: 17.10.2025.xlsx | 0 registro(s)
+[10/09/2026 10:45:07] Detectado arquivo novo/alterado: 17.11.2025.xlsx
+[10/09/2026 10:45:23] Importado com sucesso: 17.11.2025.xlsx | 0 registro(s)
+[10/09/2026 10:45:23] Detectado arquivo novo/alterado: 18.02.2026.xlsx
+[10/09/2026 10:45:31] Importado com sucesso: 18.02.2026.xlsx | 76 registro(s)
+[10/09/2026 10:45:31] Detectado arquivo novo/alterado: 18.03.2025.xlsx
+[10/09/2026 10:46:11] Importado com sucesso: 18.03.2025.xlsx | 0 registro(s)
+[10/09/2026 10:46:11] Detectado arquivo novo/alterado: 18.03.2026.xlsx
+[10/09/2026 10:46:43] Importado com sucesso: 18.03.2026.xlsx | 203 registro(s)
+[10/09/2026 10:46:43] Detectado arquivo novo/alterado: 18.04.2025.xlsx
+[10/09/2026 10:46:46] Importado com sucesso: 18.04.2025.xlsx | 0 registro(s)
+[10/09/2026 10:46:46] Detectado arquivo novo/alterado: 18.06.2025.xlsx
+[10/09/2026 10:47:09] Importado com sucesso: 18.06.2025.xlsx | 0 registro(s)
+[10/09/2026 10:47:09] Detectado arquivo novo/alterado: 18.06.2026.xlsx
+[10/09/2026 10:47:26] Importado com sucesso: 18.06.2026.xlsx | 126 registro(s)
+[10/09/2026 10:47:26] Detectado arquivo novo/alterado: 18.07.2025.xlsx
+[10/09/2026 10:47:47] Importado com sucesso: 18.07.2025.xlsx | 0 registro(s)
+[10/09/2026 10:47:47] Detectado arquivo novo/alterado: 18.08.2025.xlsx
+[10/09/2026 10:50:11] Importado com sucesso: 18.08.2025.xlsx | 0 registro(s)
+[10/09/2026 10:50:11] Detectado arquivo novo/alterado: 18.08.2026.xlsx
+[10/09/2026 10:50:57] Importado com sucesso: 18.08.2026.xlsx | 215 registro(s)
+[10/09/2026 10:50:57] Detectado arquivo novo/alterado: 18.09.2025.xlsx
+[10/09/2026 10:52:09] Importado com sucesso: 18.09.2025.xlsx | 0 registro(s)
+[10/09/2026 10:52:09] Detectado arquivo novo/alterado: 18.11.2025.xlsx
+[10/09/2026 10:52:29] Importado com sucesso: 18.11.2025.xlsx | 0 registro(s)
+[10/09/2026 10:52:29] Detectado arquivo novo/alterado: 18.12.2025.xlsx
+[10/09/2026 10:52:42] Importado com sucesso: 18.12.2025.xlsx | 0 registro(s)
+[10/09/2026 10:52:42] Detectado arquivo novo/alterado: 19.01.2026.xlsx
+[10/09/2026 10:53:11] Importado com sucesso: 19.01.2026.xlsx | 182 registro(s)
+[10/09/2026 10:53:11] Detectado arquivo novo/alterado: 19.02.2026.xlsx
+[10/09/2026 10:54:03] Importado com sucesso: 19.02.2026.xlsx | 263 registro(s)
+[10/09/2026 10:54:03] Detectado arquivo novo/alterado: 19.03.2025.xlsx
+[10/09/2026 10:54:32] Importado com sucesso: 19.03.2025.xlsx | 0 registro(s)
+[10/09/2026 10:54:32] Detectado arquivo novo/alterado: 19.03.2026.xlsx
+[10/09/2026 10:54:52] Importado com sucesso: 19.03.2026.xlsx | 141 registro(s)
+[10/09/2026 10:54:52] Detectado arquivo novo/alterado: 19.05.2025.xlsx
+[10/09/2026 10:55:50] Importado com sucesso: 19.05.2025.xlsx | 0 registro(s)
+[10/09/2026 10:55:50] Detectado arquivo novo/alterado: 19.05.2026.xlsx
+[10/09/2026 10:56:06] Importado com sucesso: 19.05.2026.xlsx | 119 registro(s)
+[10/09/2026 10:56:06] Detectado arquivo novo/alterado: 19.06.2026.xlsx
+[10/09/2026 10:56:41] Importado com sucesso: 19.06.2026.xlsx | 209 registro(s)
+[10/09/2026 10:56:41] Detectado arquivo novo/alterado: 19.08.2025.xlsx
+[10/09/2026 10:57:12] Importado com sucesso: 19.08.2025.xlsx | 0 registro(s)
+[10/09/2026 10:57:12] Detectado arquivo novo/alterado: 19.08.2026.xlsx
+[10/09/2026 10:57:53] Importado com sucesso: 19.08.2026.xlsx | 231 registro(s)
+[10/09/2026 10:57:53] Detectado arquivo novo/alterado: 19.09.2025.xlsx
+[10/09/2026 10:58:08] Importado com sucesso: 19.09.2025.xlsx | 0 registro(s)
+[10/09/2026 10:58:08] Detectado arquivo novo/alterado: 19.11.2025.xlsx
+[10/09/2026 10:58:17] Importado com sucesso: 19.11.2025.xlsx | 0 registro(s)
+[10/09/2026 10:58:17] Detectado arquivo novo/alterado: 19.12.2025.xlsx
+[10/09/2026 10:58:58] Importado com sucesso: 19.12.2025.xlsx | 0 registro(s)
+[10/09/2026 10:58:58] Detectado arquivo novo/alterado: 20.01.2026.xlsx
+[10/09/2026 10:59:33] Importado com sucesso: 20.01.2026.xlsx | 210 registro(s)
+[10/09/2026 10:59:33] Detectado arquivo novo/alterado: 20.02.2026.xlsx
+[10/09/2026 11:01:23] Importado com sucesso: 20.02.2026.xlsx | 403 registro(s)
+[10/09/2026 11:01:23] Detectado arquivo novo/alterado: 20.03.2025.xlsx
+[10/09/2026 11:01:37] Importado com sucesso: 20.03.2025.xlsx | 0 registro(s)
+[10/09/2026 11:01:37] Detectado arquivo novo/alterado: 20.03.2026.xlsx
+[10/09/2026 11:02:06] Importado com sucesso: 20.03.2026.xlsx | 194 registro(s)
+[10/09/2026 11:02:06] Detectado arquivo novo/alterado: 20.05.2025.xlsx
+[10/09/2026 11:02:29] Importado com sucesso: 20.05.2025.xlsx | 0 registro(s)
+[10/09/2026 11:02:29] Detectado arquivo novo/alterado: 20.05.2026.xlsx
+[10/09/2026 11:02:39] ERRO ao importar 20.05.2026.xlsx: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+[10/09/2026 11:02:39] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+
+[10/09/2026 11:02:39] Detectado arquivo novo/alterado: 20.06.2025.xlsx
+[10/09/2026 11:03:00] Importado com sucesso: 20.06.2025.xlsx | 0 registro(s)
+[10/09/2026 11:03:00] Detectado arquivo novo/alterado: 20.07.2026.xlsx
+[10/09/2026 11:03:38] Importado com sucesso: 20.07.2026.xlsx | 218 registro(s)
+[10/09/2026 11:03:38] Detectado arquivo novo/alterado: 20.08.2025.xlsx
+[10/09/2026 11:04:53] Importado com sucesso: 20.08.2025.xlsx | 0 registro(s)
+[10/09/2026 11:04:53] Detectado arquivo novo/alterado: 20.10.2025.xlsx
+[10/09/2026 11:05:26] Importado com sucesso: 20.10.2025.xlsx | 0 registro(s)
+[10/09/2026 11:05:26] Detectado arquivo novo/alterado: 21.01.2026.xlsx
+[10/09/2026 11:06:03] Importado com sucesso: 21.01.2026.xlsx | 220 registro(s)
+[10/09/2026 11:06:03] Detectado arquivo novo/alterado: 21.03.2025.xlsx
+[10/09/2026 11:06:36] Importado com sucesso: 21.03.2025.xlsx | 0 registro(s)
+[10/09/2026 11:06:36] Detectado arquivo novo/alterado: 21.04.2025.xlsx
+[10/09/2026 11:06:38] Importado com sucesso: 21.04.2025.xlsx | 0 registro(s)
+[10/09/2026 11:06:38] Detectado arquivo novo/alterado: 21.05.2025.xlsx
+[10/09/2026 11:07:02] Importado com sucesso: 21.05.2025.xlsx | 0 registro(s)
+[10/09/2026 11:07:02] Detectado arquivo novo/alterado: 21.05.2026.xlsx
+[10/09/2026 11:07:23] Importado com sucesso: 21.05.2026.xlsx | 153 registro(s)
+[10/09/2026 11:07:23] Detectado arquivo novo/alterado: 21.07.2025.xlsx
+[10/09/2026 11:08:01] Importado com sucesso: 21.07.2025.xlsx | 0 registro(s)
+[10/09/2026 11:08:01] Detectado arquivo novo/alterado: 21.07.2026.xlsx
+[10/09/2026 11:08:19] Importado com sucesso: 21.07.2026.xlsx | 144 registro(s)
+[10/09/2026 11:08:19] Detectado arquivo novo/alterado: 21.08.2025.xlsx
+[10/09/2026 11:08:55] Importado com sucesso: 21.08.2025.xlsx | 0 registro(s)
+[10/09/2026 11:08:55] Detectado arquivo novo/alterado: 21.08.2026.xlsx
+[10/09/2026 11:09:49] Importado com sucesso: 21.08.2026.xlsx | 267 registro(s)
+[10/09/2026 11:09:49] Detectado arquivo novo/alterado: 21.10.2025.xlsx
+[10/09/2026 11:10:19] Importado com sucesso: 21.10.2025.xlsx | 0 registro(s)
+[10/09/2026 11:10:19] Detectado arquivo novo/alterado: 21.11.2025.xlsx
+[10/09/2026 11:10:52] Importado com sucesso: 21.11.2025.xlsx | 0 registro(s)
+[10/09/2026 11:10:52] Detectado arquivo novo/alterado: 22.01.2026.xlsx
+[10/09/2026 11:11:19] Importado com sucesso: 22.01.2026.xlsx | 155 registro(s)
+[10/09/2026 11:11:19] Detectado arquivo novo/alterado: 22.04.2025.xlsx
+[10/09/2026 11:11:48] Importado com sucesso: 22.04.2025.xlsx | 0 registro(s)
+[10/09/2026 11:11:48] Detectado arquivo novo/alterado: 22.05.2025.xlsx
+[10/09/2026 11:11:58] Importado com sucesso: 22.05.2025.xlsx | 0 registro(s)
+[10/09/2026 11:11:58] Detectado arquivo novo/alterado: 22.05.2026.xlsx
+[10/09/2026 11:13:17] Aplicativo iniciado.
+[10/09/2026 11:13:17] SQL Login carregado diretamente das credenciais configuradas no código.
+[10/09/2026 11:13:20] Verificando 344 arquivo(s) na pasta.
+[10/09/2026 11:13:28] 110 arquivo(s) novo(s)/alterado(s) para importar.
+[10/09/2026 11:13:28] Detectado arquivo novo/alterado: 02.09.2026.xlsx
+[10/09/2026 11:13:37] ERRO ao importar 02.09.2026.xlsx: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+[10/09/2026 11:13:37] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+
+[10/09/2026 11:13:37] Detectado arquivo novo/alterado: 09.07.2025.xlsx
+[10/09/2026 11:13:40] ERRO ao importar 09.07.2025.xlsx: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+[10/09/2026 11:13:40] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+
+[10/09/2026 11:13:40] Detectado arquivo novo/alterado: 10.10.2025.xlsx
+[10/09/2026 11:13:42] ERRO ao importar 10.10.2025.xlsx: Colunas não encontradas: TIPO, DATA, SALDO_ATUAL, QTD_ENTRADA
+[10/09/2026 11:13:42] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: TIPO, DATA, SALDO_ATUAL, QTD_ENTRADA
+
+[10/09/2026 11:13:42] Detectado arquivo novo/alterado: 13.06.2026.xlsx
+[10/09/2026 11:13:54] ERRO ao importar 13.06.2026.xlsx: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+[10/09/2026 11:13:54] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+
+[10/09/2026 11:13:54] Detectado arquivo novo/alterado: 20.05.2026.xlsx
+[10/09/2026 11:14:07] ERRO ao importar 20.05.2026.xlsx: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+[10/09/2026 11:14:07] Traceback (most recent call last):
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1177, in executar_ciclo
+    self.importar_um_arquivo(conn, arquivo)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 1061, in importar_um_arquivo
+    registros = self.ler_arquivo(caminho)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 850, in ler_arquivo
+    mapa = self.montar_mapa_colunas(ws)
+  File "D:\Projetos Python\Projeto1\Projeto\importador_entrada_nfs.py", line 831, in montar_mapa_colunas
+    raise ValueError(
+        "Colunas não encontradas: " + ", ".join(faltando)
+    )
+ValueError: Colunas não encontradas: CODIGO_PROTHEUS, CUSTO_ATUAL, DATA, SALDO_ATUAL, QTD_ENTRADA, DOC_ENTRADA, FORNECEDOR, CUSTO_ANTERIOR, CUSTO_ENT_DOC, USUARIO, ORIGEM
+
+[10/09/2026 11:14:07] Detectado arquivo novo/alterado: 22.05.2026.xlsx
+[10/09/2026 11:14:59] Importado com sucesso: 22.05.2026.xlsx | 248 registro(s)
+[10/09/2026 11:14:59] Detectado arquivo novo/alterado: 22.06.2026.xlsx
+[10/09/2026 11:15:13] Importado com sucesso: 22.06.2026.xlsx | 123 registro(s)
+[10/09/2026 11:15:13] Detectado arquivo novo/alterado: 22.07.2025.xlsx
+[10/09/2026 11:15:53] Importado com sucesso: 22.07.2025.xlsx | 0 registro(s)
+[10/09/2026 11:15:53] Detectado arquivo novo/alterado: 22.07.2026.xlsx
+[10/09/2026 11:16:08] Importado com sucesso: 22.07.2026.xlsx | 124 registro(s)
+[10/09/2026 11:16:08] Detectado arquivo novo/alterado: 22.08.2025.xlsx
+[10/09/2026 11:16:34] Importado com sucesso: 22.08.2025.xlsx | 0 registro(s)
+[10/09/2026 11:16:34] Detectado arquivo novo/alterado: 22.09.2025.xlsx
+[10/09/2026 11:16:59] Importado com sucesso: 22.09.2025.xlsx | 0 registro(s)
+[10/09/2026 11:16:59] Detectado arquivo novo/alterado: 22.10.2025.xlsx
+[10/09/2026 11:17:43] Importado com sucesso: 22.10.2025.xlsx | 0 registro(s)
+[10/09/2026 11:17:43] Detectado arquivo novo/alterado: 23.01.2026.xlsx
+[10/09/2026 11:18:30] Aplicativo iniciado.
+[10/09/2026 11:18:30] SQL Login carregado diretamente das credenciais configuradas no código.
+[10/09/2026 11:18:32] Conexão SQL OK. Servidor: SERVER | Banco: FTECH
+[10/09/2026 11:18:35] Verificando 154 arquivo(s) na pasta.
+[10/09/2026 11:18:41] 47 arquivo(s) novo(s)/alterado(s) para importar.
+[10/09/2026 11:18:41] Detectado arquivo novo/alterado: 02.09.2026.xlsx
+[10/09/2026 11:18:49] Cabeçalho diferente detectado na linha 1; usando mapeamento por posição das 15 colunas.
+[10/09/2026 11:18:49] 02.09.2026.xlsx: aba 'Sheet', cabeçalho na linha 1, modo POSICAO.
+[10/09/2026 11:33:59] Já existe uma sincronização em andamento.

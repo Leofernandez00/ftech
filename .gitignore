@@ -1,0 +1,40 @@
+
+# Publicador FTECH
+.env
+venv/
+.venv/
+build/
+dist/
+__pycache__/
+*.pyc
+*.spec
+webview_profile/
+webview_profiles/
+*.download
+
+# Publicador FTECH
+FTECH_PUBLICACAO/
+
+# Credenciais e arquivos particulares
+.env
+credentials.json
+credentials*.json
+client_secret*.json
+token.json
+token*.json
+
+# Executáveis e arquivos gerados
+*.exe
+build/
+dist/
+*.spec
+
+# Repositório do Publicador
+FTECH_PUBLICACAO/
+credentials.json
+credentials*.json
+client_secret*.json
+token.json
+token*.json
+*.exe
+FTECH_PUBLICACAO/

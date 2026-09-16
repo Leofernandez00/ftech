@@ -1,0 +1,5 @@
+2026-08-25 17:50:03,398 | INFO | ======================================================================
+2026-08-25 17:50:03,398 | INFO | FiscalLocalDBSync iniciado.
+2026-08-25 17:50:03,398 | INFO | BATCH_SIZE=500
+2026-08-25 17:50:03,398 | INFO | Pooling ODBC desativado: conexão LocalDB será realmente fechada.
+2026-08-25 17:50:03,663 | INFO | Validando estrutura das tabelas...
