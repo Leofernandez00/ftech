@@ -1,343 +1,24 @@
 import os
-import sys
-import re
-import json
-import hmac
-import time
-import socket
 import hashlib
 import secrets
-import tempfile
-import subprocess
-import threading
+import string
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import ttk, messagebox
 
 import pyodbc
-import requests
-import webview
 from dotenv import load_dotenv
-from packaging.version import Version, InvalidVersion
-from PIL import Image, ImageTk
 
 load_dotenv()
 
-APP_NAME = "FTECH App"
-APP_VERSION = os.getenv("APP_VERSION", "2.0.14").strip()
 SQL_SERVER = os.getenv("SQL_SERVER", "").strip()
 SQL_DATABASE = os.getenv("SQL_DATABASE", "").strip()
 SQL_USER = os.getenv("SQL_USER", "").strip()
 SQL_PASSWORD = os.getenv("SQL_PASSWORD", "").strip()
 SQL_DRIVER = os.getenv("SQL_DRIVER", "ODBC Driver 17 for SQL Server").strip()
-REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "300"))
-MAX_TENTATIVAS = 5
-
-APPSHEET_URL_PADRAO = (
-    "https://www.appsheet.com/start/"
-    "8a8b91d3-535d-4517-bb03-1e9f015a419d"
-)
-
-ZOOM_JS = r"""
-(function () {
-    function instalarZoom() {
-        if (!document.body) {
-            setTimeout(instalarZoom, 300);
-            return;
-        }
-        if (window.__zoomInstalled) return;
-        window.__zoomInstalled = true;
-
-        let zoomSalvo = parseFloat(localStorage.getItem('ftech_zoom'));
-        let zoomInicial = __FTECH_INITIAL_ZOOM__;
-        let zoom = Number.isFinite(zoomSalvo) ? zoomSalvo : zoomInicial;
-
-        function limitarZoom(valor) {
-            return Math.min(Math.max(valor, 0.5), 3.0);
-        }
-        function applyZoom() {
-            zoom = limitarZoom(zoom);
-            document.body.style.zoom = String(zoom);
-            localStorage.setItem('ftech_zoom', String(zoom));
-            // O zoom continua persistido no localStorage. Evitamos chamar
-            // salvar_zoom via pywebview aqui porque a navegação/reload do AppSheet
-            // pode destruir o callback JS antes do retorno do Python, gerando
-            // JavascriptException em _returnValuesCallbacks.
-
-        }
-        applyZoom();
-
-        window.addEventListener('wheel', function (e) {
-            if (!e.ctrlKey) return;
-            e.preventDefault();
-            zoom += e.deltaY < 0 ? 0.1 : -0.1;
-            zoom = Math.round(zoom * 10) / 10;
-            applyZoom();
-        }, { passive: false });
-
-        const container = document.createElement('div');
-        container.id = 'ftech-zoom-container';
-        container.style.position = 'fixed';
-        container.style.right = '15px';
-        container.style.bottom = '15px';
-        container.style.zIndex = '2147483647';
-        container.style.display = 'flex';
-        container.style.flexDirection = 'column';
-        container.style.gap = '6px';
-
-        function makeButton(text, onclick, titulo) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.innerText = text;
-            btn.title = titulo;
-            btn.style.width = '42px';
-            btn.style.height = '42px';
-            btn.style.fontSize = '22px';
-            btn.style.fontWeight = 'bold';
-            btn.style.cursor = 'pointer';
-            btn.style.borderRadius = '8px';
-            btn.style.border = 'none';
-            btn.style.background = '#33e60b';
-            btn.style.color = '#030303';
-            btn.style.boxShadow = '0 2px 8px rgba(0,0,0,.25)';
-            btn.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                onclick();
-            });
-            return btn;
-        }
-
-        container.appendChild(makeButton('↗', function () {
-            if (window.pywebview && window.pywebview.api) {
-                window.pywebview.api.abrir_nova_janela().catch(function () {});
-            }
-        }, 'Abrir nova janela do FTECH'));
-
-        container.appendChild(makeButton('+', function () {
-            zoom = Math.round(Math.min(zoom + 0.1, 3.0) * 10) / 10;
-            applyZoom();
-        }, 'Aumentar zoom'));
-
-        container.appendChild(makeButton('−', function () {
-            zoom = Math.round(Math.max(zoom - 0.1, 0.5) * 10) / 10;
-            applyZoom();
-        }, 'Diminuir zoom'));
-
-        document.body.appendChild(container);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', instalarZoom, { once: true });
-    } else {
-        instalarZoom();
-    }
-})();
-"""
-
-THEME_JS = r"""
-(function () {
-    function instalarTema() {
-        if (!document.body) {
-            setTimeout(instalarTema, 300);
-            return;
-        }
-        if (window.__ftechThemeInstalled) return;
-        window.__ftechThemeInstalled = true;
-
-        const temaSalvo = localStorage.getItem('ftech_tema');
-        let temaEscuro = temaSalvo === null
-            ? __FTECH_INITIAL_DARK__
-            : temaSalvo === 'escuro';
-
-        const style = document.createElement('style');
-        style.id = 'ftech-theme-style';
-        style.textContent = `
-            html.ftech-dark-theme {
-                background: #202124 !important;
-                filter: invert(0.88) hue-rotate(180deg) !important;
-            }
-            html.ftech-dark-theme img,
-            html.ftech-dark-theme video,
-            html.ftech-dark-theme canvas,
-            html.ftech-dark-theme svg,
-            html.ftech-dark-theme [style*="background-image"] {
-                filter: invert(1) hue-rotate(180deg) !important;
-            }
-            #ftech-theme-button {
-                position: fixed !important;
-                right: 68px !important;
-                bottom: 15px !important;
-                z-index: 2147483647 !important;
-                height: 42px !important;
-                min-width: 105px !important;
-                padding: 0 12px !important;
-                border: none !important;
-                border-radius: 8px !important;
-                background: #1f4e78 !important;
-                color: white !important;
-                font: bold 13px 'Segoe UI', sans-serif !important;
-                cursor: pointer !important;
-                box-shadow: 0 2px 8px rgba(0,0,0,.25) !important;
-                filter: none !important;
-            }
-            html.ftech-dark-theme #ftech-theme-button {
-                filter: invert(1) hue-rotate(180deg) !important;
-            }
-        `;
-        document.head.appendChild(style);
-
-        const button = document.createElement('button');
-        button.id = 'ftech-theme-button';
-        button.type = 'button';
-        button.title = 'Alternar tema claro ou escuro';
-
-        function aplicarTema() {
-            document.documentElement.classList.toggle(
-                'ftech-dark-theme', temaEscuro
-            );
-            button.textContent = temaEscuro ? '☀ Claro' : '🌙 Escuro';
-            localStorage.setItem(
-                'ftech_tema', temaEscuro ? 'escuro' : 'claro'
-            );
-            if (window.pywebview && window.pywebview.api) {
-                window.pywebview.api.salvar_tema(
-                    temaEscuro ? 'escuro' : 'claro'
-                ).catch(function () {});
-            }
-        }
-
-        button.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            temaEscuro = !temaEscuro;
-            aplicarTema();
-        });
-
-        document.body.appendChild(button);
-        aplicarTema();
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', instalarTema, { once: true });
-    } else {
-        instalarTema();
-    }
-})();
-"""
 
 
-def resource_path(relative_path):
-    """Retorna o caminho correto no Python e no EXE criado pelo PyInstaller."""
-    base_path = getattr(sys, "_MEIPASS", get_application_directory())
-    return os.path.join(base_path, relative_path)
-
-
-def center_window(window, width, height):
-    window.update_idletasks()
-    x = (window.winfo_screenwidth() - width) // 2
-    y = (window.winfo_screenheight() - height) // 2
-    window.geometry(f"{width}x{height}+{x}+{y}")
-
-
-def get_machine_name():
-    try:
-        return socket.gethostname()
-    except Exception:
-        return "Desconhecido"
-
-
-def get_local_ip():
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.connect(("8.8.8.8", 80))
-            return sock.getsockname()[0]
-    except Exception:
-        return "Desconhecido"
-
-
-def sanitize_username(username):
-    return re.sub(r"[^a-zA-Z0-9._-]", "_", username.strip().lower())
-
-
-def get_application_directory():
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
-
-def get_executable_path():
-    return os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__)
-
-
-class PreferenciasWeb:
-    """Salva tema e zoom fora do navegador para persistirem entre execuções."""
-
-    def __init__(self, caminho):
-        self.caminho = caminho
-        self.lock = threading.Lock()
-        self.dados = {"tema": "claro", "zoom": 1.0}
-        self.abrir_nova_janela_callback = None
-        self._carregar()
-
-    def _carregar(self):
-        try:
-            with open(self.caminho, "r", encoding="utf-8") as arquivo:
-                dados = json.load(arquivo)
-            if dados.get("tema") in ("claro", "escuro"):
-                self.dados["tema"] = dados["tema"]
-            zoom = float(dados.get("zoom", 1.0))
-            self.dados["zoom"] = min(max(zoom, 0.5), 3.0)
-        except (OSError, ValueError, TypeError, json.JSONDecodeError):
-            pass
-
-    def _salvar(self):
-        os.makedirs(os.path.dirname(self.caminho), exist_ok=True)
-        temporario = self.caminho + ".tmp"
-        with open(temporario, "w", encoding="utf-8") as arquivo:
-            json.dump(self.dados, arquivo, ensure_ascii=False, indent=2)
-        os.replace(temporario, self.caminho)
-
-    def salvar_zoom(self, zoom):
-        try:
-            valor = min(max(float(zoom), 0.5), 3.0)
-            with self.lock:
-                self.dados["zoom"] = valor
-                self._salvar()
-            return True
-        except (OSError, ValueError, TypeError):
-            return False
-
-    def salvar_tema(self, tema):
-        if tema not in ("claro", "escuro"):
-            return False
-        try:
-            with self.lock:
-                self.dados["tema"] = tema
-                self._salvar()
-            return True
-        except OSError:
-            return False
-
-    def abrir_nova_janela(self):
-        if callable(self.abrir_nova_janela_callback):
-            self.abrir_nova_janela_callback()
-            return True
-        return False
-
-
-def get_sql_connection():
-    missing = [
-        name for name, value in (
-            ("SQL_SERVER", SQL_SERVER),
-            ("SQL_DATABASE", SQL_DATABASE),
-            ("SQL_USER", SQL_USER),
-            ("SQL_PASSWORD", SQL_PASSWORD),
-        ) if not value
-    ]
-    if missing:
-        raise RuntimeError("Configurações ausentes no .env: " + ", ".join(missing))
-
-    conn_str = (
+def get_connection():
+    connection_string = (
         f"DRIVER={{{SQL_DRIVER}}};"
         f"SERVER={SQL_SERVER};"
         f"DATABASE={SQL_DATABASE};"
@@ -345,7 +26,7 @@ def get_sql_connection():
         f"PWD={SQL_PASSWORD};"
         "Encrypt=yes;TrustServerCertificate=yes;Connection Timeout=15;"
     )
-    return pyodbc.connect(conn_str)
+    return pyodbc.connect(connection_string)
 
 
 def generate_password_hash(password):
@@ -354,1613 +35,356 @@ def generate_password_hash(password):
     return digest.hex(), salt.hex()
 
 
-def verify_password(password, stored_hash, stored_salt):
-    try:
-        salt = bytes.fromhex(stored_salt)
-        digest = hashlib.pbkdf2_hmac(
-            "sha256", password.encode("utf-8"), salt, 600_000
-        ).hex()
-        return hmac.compare_digest(digest, stored_hash)
-    except Exception:
-        return False
+def generate_temporary_password(length=12):
+    """Gera uma senha temporária com letras maiúsculas, minúsculas e números."""
+    alphabet = string.ascii_letters + string.digits
+    while True:
+        password = "".join(secrets.choice(alphabet) for _ in range(length))
+        if (any(c.islower() for c in password)
+                and any(c.isupper() for c in password)
+                and any(c.isdigit() for c in password)):
+            return password
 
 
-def register_login_log(usuario, sucesso, motivo, id_usuario=None):
-    try:
-        with get_sql_connection() as connection:
-            cursor = connection.cursor()
-            cursor.execute(
-                """
-                INSERT INTO dbo.FTECH_USUARIOS_APP_LOG
-                (ID_USUARIO, USUARIO_INFORMADO, COMPUTADOR, IP_LOCAL, SUCESSO, MOTIVO)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                id_usuario, usuario, get_machine_name(), get_local_ip(),
-                1 if sucesso else 0, motivo,
+class UserAdminApp:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("FTECH | Cadastro de usuários")
+        self.root.geometry("1050x650")
+        self.root.minsize(900, 580)
+        self.selected_user_id = None
+        self.build_interface()
+        self.load_users()
+
+    def build_interface(self):
+        header = tk.Frame(self.root, bg="#1f4e78", height=75)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+        tk.Label(
+            header,
+            text="Administração de usuários FTECH",
+            bg="#1f4e78",
+            fg="white",
+            font=("Segoe UI", 18, "bold"),
+        ).pack(pady=20)
+
+        body = tk.Frame(self.root, padx=18, pady=15)
+        body.pack(fill="both", expand=True)
+
+        form = ttk.LabelFrame(body, text="Cadastro / edição", padding=12)
+        form.pack(fill="x")
+
+        self.usuario = tk.StringVar()
+        self.nome = tk.StringVar()
+        self.senha = tk.StringVar()
+        self.confirmacao = tk.StringVar()
+        self.provedor = tk.StringVar(value="OPENID")
+        self.email = tk.StringVar()
+        self.appsheet_senha = tk.StringVar()
+        self.url = tk.StringVar(value=(
+            "https://www.appsheet.com/start/"
+            "8a8b91d3-535d-4517-bb03-1e9f015a419d"
+        ))
+        self.ativo = tk.BooleanVar(value=True)
+        self.trocar_senha = tk.BooleanVar(value=True)
+
+        fields = [
+            ("Usuário", self.usuario, ""),
+            ("Nome completo", self.nome, ""),
+            ("Senha", self.senha, "●"),
+            ("Confirmar senha", self.confirmacao, "●"),
+            ("E-mail AppSheet", self.email, ""),
+            ("Senha OpenID / AppSheet", self.appsheet_senha, "●"),
+            ("URL AppSheet", self.url, ""),
+        ]
+
+        for index, (label, variable, show) in enumerate(fields):
+            row = index // 2
+            col = (index % 2) * 2
+            ttk.Label(form, text=label).grid(row=row, column=col, sticky="w", padx=(0, 8), pady=6)
+            ttk.Entry(form, textvariable=variable, show=show).grid(
+                row=row, column=col + 1, sticky="ew", padx=(0, 16), pady=6
             )
-            connection.commit()
-    except Exception as error:
-        print(f"Erro ao registrar log: {error}")
 
+        ttk.Label(form, text="Provedor").grid(row=4, column=0, sticky="w", padx=(0, 8), pady=6)
+        ttk.Combobox(
+            form,
+            textvariable=self.provedor,
+            values=("OPENID", "GOOGLE", "MICROSOFT"),
+            state="readonly",
+        ).grid(row=4, column=1, sticky="ew", padx=(0, 16), pady=6)
 
-def authenticate_user(username, password):
-    username = username.strip().lower()
-    if not username or not password:
-        return None, "Informe o usuário e a senha."
+        ttk.Checkbutton(form, text="Usuário ativo", variable=self.ativo).grid(
+            row=4, column=2, sticky="w", pady=6
+        )
 
-    try:
-        with get_sql_connection() as connection:
+        ttk.Checkbutton(
+            form,
+            text="Exigir troca de senha no próximo login",
+            variable=self.trocar_senha,
+        ).grid(row=4, column=3, sticky="w", pady=6)
+
+        ttk.Button(
+            form,
+            text="Gerar senha temporária",
+            command=self.generate_temp_password,
+        ).grid(row=5, column=1, sticky="w", pady=(8, 0))
+
+        form.columnconfigure(1, weight=1)
+        form.columnconfigure(3, weight=1)
+
+        buttons = tk.Frame(body)
+        buttons.pack(fill="x", pady=10)
+        ttk.Button(buttons, text="Novo / limpar", command=self.clear_form).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Salvar", command=self.save_user).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Desbloquear", command=self.unlock_user).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Ativar / desativar", command=self.toggle_active).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Excluir", command=self.delete_user).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Atualizar lista", command=self.load_users).pack(side="right")
+
+        frame = ttk.LabelFrame(body, text="Usuários cadastrados", padding=8)
+        frame.pack(fill="both", expand=True)
+
+        columns = ("id", "usuario", "nome", "provedor", "email", "ativo", "trocar_senha", "bloqueado", "tentativas", "ultimo_login")
+        self.tree = ttk.Treeview(frame, columns=columns, show="headings", selectmode="browse")
+
+        headings = {
+            "id": "ID", "usuario": "Usuário", "nome": "Nome", "provedor": "Provedor",
+            "email": "E-mail", "ativo": "Ativo", "trocar_senha": "Trocar senha", "bloqueado": "Bloqueado",
+            "tentativas": "Tentativas", "ultimo_login": "Último login",
+        }
+        widths = {
+            "id": 55, "usuario": 120, "nome": 180, "provedor": 90,
+            "email": 210, "ativo": 60, "trocar_senha": 90, "bloqueado": 80,
+            "tentativas": 75, "ultimo_login": 140,
+        }
+        for column in columns:
+            self.tree.heading(column, text=headings[column])
+            self.tree.column(column, width=widths[column], anchor="center")
+
+        sy = ttk.Scrollbar(frame, orient="vertical", command=self.tree.yview)
+        sx = ttk.Scrollbar(frame, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=sy.set, xscrollcommand=sx.set)
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        sy.grid(row=0, column=1, sticky="ns")
+        sx.grid(row=1, column=0, sticky="ew")
+        frame.rowconfigure(0, weight=1)
+        frame.columnconfigure(0, weight=1)
+        self.tree.bind("<<TreeviewSelect>>", self.on_select)
+
+    def generate_temp_password(self):
+        password = generate_temporary_password()
+        self.senha.set(password)
+        self.confirmacao.set(password)
+        self.trocar_senha.set(True)
+
+        self.root.clipboard_clear()
+        self.root.clipboard_append(password)
+        self.root.update()
+
+        messagebox.showinfo(
+            "Senha temporária",
+            "Senha temporária gerada e copiada para a área de transferência:\n\n"
+            f"{password}\n\n"
+            "O usuário deverá alterá-la no próximo login.",
+            parent=self.root,
+        )
+
+    def clear_form(self):
+        self.selected_user_id = None
+        self.usuario.set("")
+        self.nome.set("")
+        self.senha.set("")
+        self.confirmacao.set("")
+        self.provedor.set("OPENID")
+        self.email.set("")
+        self.appsheet_senha.set("")
+        self.url.set("https://www.appsheet.com/start/8a8b91d3-535d-4517-bb03-1e9f015a419d")
+        self.ativo.set(True)
+        self.trocar_senha.set(True)
+
+    def load_users(self):
+        try:
+            with get_connection() as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    """
+                    SELECT ID_USUARIO, USUARIO, NOME_COMPLETO, PROVEDOR_LOGIN,
+                           EMAIL_APPSHEET, ATIVO, TROCAR_SENHA_PROXIMO_LOGIN,
+                           BLOQUEADO, TENTATIVAS_LOGIN, ULTIMO_LOGIN
+                    FROM dbo.FTECH_USUARIOS_APP
+                    ORDER BY NOME_COMPLETO
+                    """
+                )
+                rows = cursor.fetchall()
+
+            self.tree.delete(*self.tree.get_children())
+            for row in rows:
+                last_login = row.ULTIMO_LOGIN.strftime("%d/%m/%Y %H:%M") if row.ULTIMO_LOGIN else ""
+                self.tree.insert("", "end", iid=str(row.ID_USUARIO), values=(
+                    row.ID_USUARIO, row.USUARIO, row.NOME_COMPLETO, row.PROVEDOR_LOGIN,
+                    row.EMAIL_APPSHEET, "Sim" if row.ATIVO else "Não",
+                    "Sim" if row.TROCAR_SENHA_PROXIMO_LOGIN else "Não",
+                    "Sim" if row.BLOQUEADO else "Não", row.TENTATIVAS_LOGIN, last_login,
+                ))
+        except Exception as error:
+            messagebox.showerror("Erro", f"Não foi possível carregar os usuários.\n\n{error}")
+
+    def on_select(self, _event=None):
+        selected = self.tree.selection()
+        if not selected:
+            return
+        self.selected_user_id = int(selected[0])
+        with get_connection() as connection:
             cursor = connection.cursor()
             cursor.execute(
                 """
-                SELECT ID_USUARIO, USUARIO, NOME_COMPLETO, SENHA_HASH, SENHA_SALT,
-                       PROVEDOR_LOGIN, EMAIL_APPSHEET, APPSHEET_SENHA, APPSHEET_URL, ATIVO,
-                       BLOQUEADO, TENTATIVAS_LOGIN,
+                SELECT USUARIO, NOME_COMPLETO, PROVEDOR_LOGIN,
+                       EMAIL_APPSHEET, APPSHEET_SENHA, APPSHEET_URL, ATIVO,
                        TROCAR_SENHA_PROXIMO_LOGIN
                 FROM dbo.FTECH_USUARIOS_APP
-                WHERE LOWER(USUARIO) = LOWER(?)
+                WHERE ID_USUARIO = ?
                 """,
-                username,
+                self.selected_user_id,
             )
             row = cursor.fetchone()
 
-            if not row:
-                register_login_log(username, False, "Usuário não encontrado.")
-                return None, "Usuário ou senha inválidos."
+        self.usuario.set(row.USUARIO)
+        self.nome.set(row.NOME_COMPLETO)
+        self.senha.set("")
+        self.confirmacao.set("")
+        self.provedor.set(row.PROVEDOR_LOGIN)
+        self.email.set(row.EMAIL_APPSHEET)
+        self.appsheet_senha.set(row.APPSHEET_SENHA or "")
+        self.url.set(row.APPSHEET_URL)
+        self.ativo.set(bool(row.ATIVO))
+        self.trocar_senha.set(bool(row.TROCAR_SENHA_PROXIMO_LOGIN))
 
-            user = {
-                "id_usuario": row.ID_USUARIO,
-                "usuario": row.USUARIO,
-                "nome_completo": row.NOME_COMPLETO,
-                "senha_hash": row.SENHA_HASH,
-                "senha_salt": row.SENHA_SALT,
-                "provedor": row.PROVEDOR_LOGIN,
-                "email_appsheet": row.EMAIL_APPSHEET,
-                "appsheet_senha": row.APPSHEET_SENHA,
-                "appsheet_url": row.APPSHEET_URL,
-                "ativo": bool(row.ATIVO),
-                "bloqueado": bool(row.BLOQUEADO),
-                "tentativas": int(row.TENTATIVAS_LOGIN or 0),
-                "trocar_senha": bool(row.TROCAR_SENHA_PROXIMO_LOGIN),
-            }
+    def validate(self):
+        usuario = self.usuario.get().strip().lower()
+        nome = self.nome.get().strip()
+        senha = self.senha.get()
+        confirmacao = self.confirmacao.get()
+        provedor = self.provedor.get().strip().upper()
+        email = self.email.get().strip().lower()
+        appsheet_senha = self.appsheet_senha.get()
+        url = self.url.get().strip()
 
-            if not user["ativo"]:
-                return None, "Este usuário está desativado."
-            if user["bloqueado"]:
-                return None, "Este usuário está bloqueado. Procure o administrador."
+        if not usuario or not nome or not email or not url:
+            raise ValueError("Preencha usuário, nome, e-mail e URL do AppSheet.")
+        if self.selected_user_id is None and not senha:
+            raise ValueError("Informe uma senha para o novo usuário.")
+        if senha and senha != confirmacao:
+            raise ValueError("A senha e a confirmação não coincidem.")
+        if senha and len(senha) < 6:
+            raise ValueError("A senha deve ter pelo menos 6 caracteres.")
+        return usuario, nome, senha, provedor, email, appsheet_senha, url
 
-            if not verify_password(password, user["senha_hash"], user["senha_salt"]):
-                tentativas = user["tentativas"] + 1
-                bloquear = tentativas >= MAX_TENTATIVAS
-                cursor.execute(
-                    """
-                    UPDATE dbo.FTECH_USUARIOS_APP
-                    SET TENTATIVAS_LOGIN = ?, BLOQUEADO = ?,
-                        DATA_ALTERACAO = SYSDATETIME()
-                    WHERE ID_USUARIO = ?
-                    """,
-                    tentativas, 1 if bloquear else 0, user["id_usuario"],
-                )
-                connection.commit()
-                register_login_log(
-                    username, False,
-                    f"Senha inválida. Tentativa {tentativas} de {MAX_TENTATIVAS}.",
-                    user["id_usuario"],
-                )
-                if bloquear:
-                    return None, "Usuário bloqueado após várias tentativas inválidas."
-                return None, "Usuário ou senha inválidos."
-
-            cursor.execute(
-                """
-                UPDATE dbo.FTECH_USUARIOS_APP
-                SET TENTATIVAS_LOGIN = 0, BLOQUEADO = 0,
-                    ULTIMO_LOGIN = SYSDATETIME(), ULTIMO_COMPUTADOR = ?,
-                    DATA_ALTERACAO = SYSDATETIME()
-                WHERE ID_USUARIO = ?
-                """,
-                get_machine_name(), user["id_usuario"],
-            )
-            connection.commit()
-            register_login_log(username, True, "Login realizado com sucesso.", user["id_usuario"])
-            return user, None
-
-    except Exception as error:
-        return None, f"Não foi possível validar o usuário.\n\nDetalhes: {error}"
-
-
-def change_user_password(user_id, new_password):
-    """Altera a senha interna do FTECH após o primeiro login."""
-    if len(new_password) < 6:
-        raise ValueError("A nova senha deve ter pelo menos 6 caracteres.")
-
-    password_hash, salt = generate_password_hash(new_password)
-
-    with get_sql_connection() as connection:
-        cursor = connection.cursor()
-        cursor.execute(
-            """
-            UPDATE dbo.FTECH_USUARIOS_APP
-            SET SENHA_HASH = ?,
-                SENHA_SALT = ?,
-                TROCAR_SENHA_PROXIMO_LOGIN = 0,
-                TENTATIVAS_LOGIN = 0,
-                BLOQUEADO = 0,
-                DATA_ULTIMA_TROCA_SENHA = SYSDATETIME(),
-                DATA_ALTERACAO = SYSDATETIME()
-            WHERE ID_USUARIO = ?
-            """,
-            password_hash,
-            salt,
-            user_id,
-        )
-
-        if cursor.rowcount == 0:
-            raise RuntimeError("Usuário não encontrado para alteração da senha.")
-
-        connection.commit()
-
-
-class ForcedPasswordChangeDialog:
-    def __init__(self, parent, user, temporary_password):
-        self.parent = parent
-        self.user = user
-        self.temporary_password = temporary_password
-        self.changed = False
-
-        self.window = tk.Toplevel(parent)
-        self.window.title("FTECH | Alteração obrigatória de senha")
-        self.window.resizable(False, False)
-        self.window.transient(parent)
-        self.window.grab_set()
-        self.window.protocol("WM_DELETE_WINDOW", self.cancel)
-        center_window(self.window, 470, 410)
-        self.window.configure(bg="#f4f4f4")
-
-        tk.Label(
-            self.window,
-            text="Crie sua nova senha",
-            font=("Segoe UI", 17, "bold"),
-            bg="#1f4e78",
-            fg="white",
-            pady=18,
-        ).pack(fill="x")
-
-        form = tk.Frame(self.window, bg="#f4f4f4", padx=45, pady=22)
-        form.pack(fill="both", expand=True)
-
-        tk.Label(
-            form,
-            text=(
-                "A senha utilizada é temporária. Para continuar, "
-                "defina uma senha pessoal."
-            ),
-            font=("Segoe UI", 10),
-            bg="#f4f4f4",
-            wraplength=370,
-            justify="left",
-        ).pack(fill="x", pady=(0, 15))
-
-        tk.Label(
-            form,
-            text="Nova senha",
-            font=("Segoe UI", 10, "bold"),
-            bg="#f4f4f4",
-            anchor="w",
-        ).pack(fill="x")
-
-        self.new_password = tk.Entry(
-            form,
-            show="●",
-            font=("Segoe UI", 11),
-            relief="solid",
-            bd=1,
-        )
-        self.new_password.pack(fill="x", ipady=6, pady=(4, 12))
-
-        tk.Label(
-            form,
-            text="Confirmar nova senha",
-            font=("Segoe UI", 10, "bold"),
-            bg="#f4f4f4",
-            anchor="w",
-        ).pack(fill="x")
-
-        self.confirm_password = tk.Entry(
-            form,
-            show="●",
-            font=("Segoe UI", 11),
-            relief="solid",
-            bd=1,
-        )
-        self.confirm_password.pack(fill="x", ipady=6, pady=(4, 17))
-
-        tk.Button(
-            form,
-            text="ALTERAR SENHA E CONTINUAR",
-            font=("Segoe UI", 14, "bold"),
-            bg="#33e60b",
-            fg="#030303",
-            activebackground="#2dcc0a",
-            bd=0,
-            cursor="hand2",
-            command=self.save,
-        ).pack(fill="x", ipady=15)
-
-        self.window.bind("<Return>", lambda _event: self.save())
-        self.window.bind("<Escape>", lambda _event: self.cancel())
-        self.new_password.focus_set()
-
-    def save(self):
-        new_password = self.new_password.get()
-        confirmation = self.confirm_password.get()
-
-        if not new_password or not confirmation:
-            messagebox.showwarning(
-                "Campos obrigatórios",
-                "Informe e confirme a nova senha.",
-                parent=self.window,
-            )
-            return
-
-        if len(new_password) < 6:
-            messagebox.showwarning(
-                "Senha inválida",
-                "A nova senha deve possuir pelo menos 6 caracteres.",
-                parent=self.window,
-            )
-            return
-
-        if new_password != confirmation:
-            messagebox.showwarning(
-                "Senhas diferentes",
-                "A nova senha e a confirmação não coincidem.",
-                parent=self.window,
-            )
-            return
-
-        if hmac.compare_digest(new_password, self.temporary_password):
-            messagebox.showwarning(
-                "Senha inválida",
-                "A nova senha deve ser diferente da senha temporária.",
-                parent=self.window,
-            )
-            return
-
+    def save_user(self):
         try:
-            change_user_password(self.user["id_usuario"], new_password)
-            register_login_log(
-                self.user["usuario"],
-                True,
-                "Senha temporária alterada com sucesso.",
-                self.user["id_usuario"],
-            )
-            self.changed = True
-            messagebox.showinfo(
-                "Senha alterada",
-                "Sua senha foi alterada com sucesso.",
-                parent=self.window,
-            )
-            self.window.destroy()
-        except Exception as error:
-            messagebox.showerror(
-                "Erro ao alterar senha",
-                str(error),
-                parent=self.window,
-            )
-
-    def cancel(self):
-        self.changed = False
-        self.window.destroy()
-
-    def show(self):
-        self.parent.wait_window(self.window)
-        return self.changed
-
-
-# ============================================================
-# ATUALIZAÇÃO VIA SQL + URL DIRETA
-# ============================================================
-
-def normalize_version(value):
-    text = str(value or "").strip()
-    if text.lower().startswith("v"):
-        text = text[1:]
-    return Version(text)
-
-
-def check_for_update():
-    with get_sql_connection() as connection:
-        cursor = connection.cursor()
-        cursor.execute(
-            """
-            SELECT TOP 1 VERSAO, URL_DOWNLOAD, SHA256, OBRIGATORIA, OBSERVACAO
-            FROM dbo.FTECH_APP_VERSAO
-            WHERE ATIVA = 1
-            ORDER BY DATA_PUBLICACAO DESC, ID_VERSAO DESC
-            """
-        )
-        row = cursor.fetchone()
-
-    if not row:
-        return None
-
-    latest = normalize_version(row.VERSAO)
-    current = normalize_version(APP_VERSION)
-    if latest <= current:
-        return None
-
-    return {
-        "version": str(latest),
-        "download_url": str(row.URL_DOWNLOAD or "").strip(),
-        "sha256": str(row.SHA256 or "").strip().lower(),
-        "mandatory": bool(row.OBRIGATORIA),
-        "notes": str(row.OBSERVACAO or "").strip(),
-    }
-
-
-def calculate_sha256(path):
-    digest = hashlib.sha256()
-    with open(path, "rb") as file:
-        for block in iter(lambda: file.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest().lower()
-
-
-def download_update(update_info, progress_callback=None):
-    if not getattr(sys, "frozen", False):
-        raise RuntimeError("A substituição automática só funciona no EXE compilado.")
-
-    folder = os.path.join(tempfile.gettempdir(), "FTECH_Update")
-    os.makedirs(folder, exist_ok=True)
-    target = os.path.join(folder, f"FTECH_App_{update_info['version']}.exe.download")
-
-    with requests.get(
-        update_info["download_url"],
-        stream=True,
-        timeout=(20, REQUEST_TIMEOUT),
-        allow_redirects=True,
-        headers={"User-Agent": f"{APP_NAME}/{APP_VERSION}"},
-    ) as response:
-        response.raise_for_status()
-        total = int(response.headers.get("content-length", 0))
-        downloaded = 0
-        with open(target, "wb") as file:
-            for block in response.iter_content(1024 * 1024):
-                if not block:
-                    continue
-                file.write(block)
-                downloaded += len(block)
-                if progress_callback and total:
-                    progress_callback(min(100, int(downloaded * 100 / total)))
-
-    if not os.path.isfile(target) or os.path.getsize(target) == 0:
-        raise RuntimeError("O arquivo baixado está vazio ou não foi criado.")
-
-    expected = update_info.get("sha256", "")
-    if expected:
-        received = calculate_sha256(target)
-        if received != expected:
-            os.remove(target)
-            raise RuntimeError(
-                "Falha de integridade SHA-256.\n\n"
-                f"Esperado: {expected}\nRecebido: {received}"
-            )
-    return target
-
-
-def create_updater_script(downloaded_file, current_executable):
-    pid = os.getpid()
-    updater_path = os.path.join(tempfile.gettempdir(), f"ftech_updater_{pid}.bat")
-
-    lines = [
-        "@echo off",
-        "setlocal EnableExtensions EnableDelayedExpansion",
-        "title Atualizacao do FTECH",
-        f'set "PID={pid}"',
-        f'set "NOVO_ARQUIVO={os.path.abspath(downloaded_file)}"',
-        f'set "ARQUIVO_ATUAL={os.path.abspath(current_executable)}"',
-        ":AGUARDAR",
-        'tasklist /FI "PID eq %PID%" 2>NUL | find "%PID%" >NUL',
-        "if not errorlevel 1 (",
-        "    timeout /t 1 /nobreak >NUL",
-        "    goto AGUARDAR",
-        ")",
-        "rem O PyInstaller --onefile ainda precisa encerrar o bootloader e limpar a pasta _MEI.",
-        "timeout /t 8 /nobreak >NUL",
-        "set /A TENTATIVAS=0",
-        ":SUBSTITUIR",
-        'copy /Y "%NOVO_ARQUIVO%" "%ARQUIVO_ATUAL%" >NUL',
-        "if errorlevel 1 (",
-        "    set /A TENTATIVAS+=1",
-        "    if !TENTATIVAS! LSS 20 (",
-        "        timeout /t 1 /nobreak >NUL",
-        "        goto SUBSTITUIR",
-        "    )",
-        '    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -Verb RunAs -Wait -ArgumentList \"/c copy /Y \\\"%NOVO_ARQUIVO%\\\" \\\"%ARQUIVO_ATUAL%\\\"\""',
-        "    if errorlevel 1 exit /b 1",
-        ")",
-        'if not exist "%ARQUIVO_ATUAL%" exit /b 1',
-        'del /F /Q "%NOVO_ARQUIVO%" >NUL 2>&1',
-        "timeout /t 3 /nobreak >NUL",
-        'start "" "%ARQUIVO_ATUAL%"',
-        "timeout /t 2 /nobreak >NUL",
-        'del /F /Q "%~f0" >NUL 2>&1',
-    ]
-
-    with open(updater_path, "w", encoding="cp1252", errors="replace") as file:
-        file.write("\r\n".join(lines) + "\r\n")
-    return updater_path
-
-
-def install_update(update_info, progress_callback=None):
-    downloaded = download_update(update_info, progress_callback)
-    script = create_updater_script(downloaded, get_executable_path())
-    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-    subprocess.Popen(["cmd.exe", "/c", script], creationflags=flags, close_fds=True)
-    return True
-
-
-class UpdateWindow:
-    def __init__(self, update_info):
-        self.update_info = update_info
-        self.success = False
-        self.root = tk.Tk()
-        self.root.title("Atualização do FTECH")
-        self.root.resizable(False, False)
-        self.root.protocol("WM_DELETE_WINDOW", lambda: None)
-        center_window(self.root, 520, 290)
-
-        tk.Label(self.root, text="Nova versão disponível", font=("Segoe UI", 16, "bold")).pack(pady=(25, 8))
-        tk.Label(
-            self.root,
-            text=f"Versão instalada: {APP_VERSION}\nNova versão: {update_info['version']}\n\n{update_info.get('notes') or 'Sem observações.'}",
-            font=("Segoe UI", 10), justify="center", wraplength=460,
-        ).pack(pady=5)
-
-        self.status = tk.Label(self.root, text="Preparando atualização...", font=("Segoe UI", 10))
-        self.status.pack(pady=(12, 5))
-        self.progress = ttk.Progressbar(self.root, maximum=100, length=410)
-        self.progress.pack(pady=5)
-        self.percent = tk.Label(self.root, text="0%", font=("Segoe UI", 10, "bold"))
-        self.percent.pack()
-
-    def update_progress(self, value):
-        self.root.after(0, lambda: self._set_progress(value))
-
-    def _set_progress(self, value):
-        self.progress["value"] = value
-        self.percent.config(text=f"{value}%")
-
-    def worker(self):
-        try:
-            self.root.after(0, lambda: self.status.config(text="Baixando atualização..."))
-            install_update(self.update_info, self.update_progress)
-            self.success = True
-            self.root.after(0, lambda: self.status.config(text="Atualização pronta. Reiniciando..."))
-            time.sleep(1)
-            self.root.after(0, self.root.destroy)
-        except Exception as error:
-            self.root.after(0, lambda e=error: self.show_error(e))
-
-    def show_error(self, error):
-        messagebox.showerror("Erro na atualização", str(error), parent=self.root)
-        self.root.destroy()
-
-    def show(self):
-        threading.Thread(target=self.worker, daemon=True).start()
-        self.root.mainloop()
-        return self.success
-
-
-def verify_and_install_update():
-    try:
-        update_info = check_for_update()
-        if not update_info:
-            return False
-        if not getattr(sys, "frozen", False):
-            print(f"Nova versão encontrada: {update_info['version']}. Atualização automática apenas no EXE.")
-            return False
-        return UpdateWindow(update_info).show()
-    except InvalidVersion as error:
-        print(f"Versão inválida: {error}")
-        return False
-    except Exception as error:
-        print(f"Erro ao verificar atualização: {error}")
-        return False
-
-
-class LoginWindow:
-    def __init__(self):
-        self.authenticated_user = None
-        self.authenticating = False
-        self.dark_theme = False
-        self.root = tk.Tk()
-        self.root.title(f"{APP_NAME} | Login")
-        self.root.resizable(False, False)
-        self.root.configure(bg="#f4f4f4")
-
-        self.icon_path = resource_path("icone.ico")
-        self.logo_image = None
-
-        try:
-            if os.path.isfile(self.icon_path):
-                self.root.iconbitmap(self.icon_path)
-        except Exception as error:
-            print(f"Não foi possível aplicar o ícone da janela: {error}")
-
-        center_window(self.root, 500, 470)
-        self.create_widgets()
-        self.apply_theme()
-        self.root.bind("<Return>", lambda _event: self.start_authentication())
-
-    def create_widgets(self):
-        self.header = tk.Frame(self.root, bg="#1f4e78", height=155)
-        self.header.pack(fill="x")
-        self.header.pack_propagate(False)
-
-        self.theme_button = tk.Button(
-            self.header,
-            text="🌙 Escuro",
-            font=("Segoe UI", 9, "bold"),
-            bg="#1f4e78",
-            fg="white",
-            activebackground="#173b5c",
-            activeforeground="white",
-            cursor="hand2",
-            bd=0,
-            command=self.toggle_theme,
-        )
-        self.theme_button.place(relx=1.0, x=-12, y=10, anchor="ne")
-
-        try:
-            if os.path.isfile(self.icon_path):
-                image = Image.open(self.icon_path).convert("RGBA")
-                image.thumbnail((72, 72), Image.Resampling.LANCZOS)
-                self.logo_image = ImageTk.PhotoImage(image)
-                tk.Label(
-                    self.header,
-                    image=self.logo_image,
-                    bg="#1f4e78",
-                    bd=0,
-                ).pack(pady=(12, 2))
-        except Exception as error:
-            print(f"Não foi possível carregar o logo da tela de login: {error}")
-
-        tk.Label(
-            self.header,
-            text="FTECH",
-            font=("Segoe UI", 23, "bold"),
-            fg="white",
-            bg="#1f4e78",
-        ).pack(pady=(0, 0))
-
-        tk.Label(
-            self.header,
-            text="Alta Paulista",
-            font=("Segoe UI", 11),
-            fg="white",
-            bg="#1f4e78",
-        ).pack()
-
-        self.form = tk.Frame(self.root, bg="#f4f4f4")
-        self.form.pack(fill="both", expand=True, padx=58, pady=24)
-
-        self.username_label = tk.Label(
-            self.form,
-            text="Usuário",
-            font=("Segoe UI", 10, "bold"),
-            bg="#f4f4f4",
-            anchor="w",
-        )
-        self.username_label.pack(fill="x")
-
-        self.username = tk.Entry(
-            self.form,
-            font=("Segoe UI", 11),
-            relief="solid",
-            bd=1,
-        )
-        self.username.pack(fill="x", ipady=7, pady=(5, 15))
-
-        self.password_label = tk.Label(
-            self.form,
-            text="Senha",
-            font=("Segoe UI", 10, "bold"),
-            bg="#f4f4f4",
-            anchor="w",
-        )
-        self.password_label.pack(fill="x")
-
-        self.password = tk.Entry(
-            self.form,
-            font=("Segoe UI", 11),
-            show="●",
-            relief="solid",
-            bd=1,
-        )
-        self.password.pack(fill="x", ipady=7, pady=(5, 20))
-
-        self.button = tk.Button(
-            self.form,
-            text="ENTRAR",
-            font=("Segoe UI", 11, "bold"),
-            bg="#33e60b",
-            fg="#030303",
-            activebackground="#2dcc0a",
-            cursor="hand2",
-            bd=0,
-            command=self.start_authentication,
-        )
-        self.button.pack(fill="x", ipady=9)
-
-        self.status = tk.Label(
-            self.form,
-            text=f"Versão {APP_VERSION}",
-            font=("Segoe UI", 9),
-            fg="#666666",
-            bg="#f4f4f4",
-        )
-        self.status.pack(pady=(14, 0))
-        self.username.focus_set()
-
-    def toggle_theme(self):
-        self.dark_theme = not self.dark_theme
-        self.apply_theme()
-
-    def apply_theme(self):
-        if self.dark_theme:
-            background = "#202124"
-            foreground = "#f1f3f4"
-            field_background = "#303134"
-            field_foreground = "#f1f3f4"
-            header_background = "#152f45"
-            status_foreground = "#bdc1c6"
-            theme_text = "☀ Claro"
-        else:
-            background = "#f4f4f4"
-            foreground = "#030303"
-            field_background = "white"
-            field_foreground = "#030303"
-            header_background = "#1f4e78"
-            status_foreground = "#666666"
-            theme_text = "🌙 Escuro"
-
-        self.root.configure(bg=background)
-        self.header.configure(bg=header_background)
-        self.form.configure(bg=background)
-        self.username_label.configure(bg=background, fg=foreground)
-        self.password_label.configure(bg=background, fg=foreground)
-        self.username.configure(
-            bg=field_background,
-            fg=field_foreground,
-            insertbackground=field_foreground,
-        )
-        self.password.configure(
-            bg=field_background,
-            fg=field_foreground,
-            insertbackground=field_foreground,
-        )
-        self.status.configure(bg=background, fg=status_foreground)
-        self.theme_button.configure(
-            text=theme_text,
-            bg=header_background,
-            activebackground=header_background,
-        )
-
-        for widget in self.header.winfo_children():
-            if isinstance(widget, tk.Label):
-                widget.configure(bg=header_background)
-
-    def start_authentication(self):
-        if self.authenticating:
-            return
-        username = self.username.get().strip()
-        password = self.password.get()
-        if not username or not password:
-            messagebox.showwarning("Campos obrigatórios", "Informe o usuário e a senha.", parent=self.root)
-            return
-
-        self.authenticating = True
-        self.button.config(state="disabled", text="VALIDANDO...")
-        self.status.config(text="Conectando ao servidor...")
-        threading.Thread(target=self.worker, args=(username, password), daemon=True).start()
-
-    def worker(self, username, password):
-        user, error = authenticate_user(username, password)
-        self.root.after(
-            0,
-            lambda: self.finished(user, error, password),
-        )
-
-    def finished(self, user, error, informed_password):
-        self.authenticating = False
-        self.button.config(state="normal", text="ENTRAR")
-        self.password.delete(0, tk.END)
-
-        if error:
-            self.status.config(text="Falha na autenticação.")
-            messagebox.showerror("Login não autorizado", error, parent=self.root)
-            return
-
-        if user.get("trocar_senha"):
-            self.status.config(text="Alteração obrigatória de senha...")
-            changed = ForcedPasswordChangeDialog(
-                self.root,
-                user,
-                informed_password,
-            ).show()
-
-            informed_password = None
-
-            if not changed:
-                self.status.config(
-                    text="A senha deve ser alterada para continuar."
-                )
-                messagebox.showwarning(
-                    "Alteração obrigatória",
-                    "O acesso não será liberado enquanto a senha temporária "
-                    "não for alterada.",
-                    parent=self.root,
-                )
-                return
-
-            user["trocar_senha"] = False
-
-        informed_password = None
-        self.authenticated_user = user
-        self.root.destroy()
-
-    def show(self):
-        self.root.mainloop()
-        return self.authenticated_user
-
-
-def criar_javascript_provedor(provider):
-    """Seleciona o provedor na tela de autenticação AppSheet."""
-    provider = str(provider or "").upper().strip()
-    provider_text = {"GOOGLE": "Google", "MICROSOFT": "Microsoft", "OPENID": "Login"}.get(provider)
-    if not provider_text:
-        return "(function(){ return 'Provedor não reconhecido'; })();"
-    alvo = json.dumps(provider_text)
-    return r"""
-    (function () {
-        const provider = __PROVIDER__;
-        if (window.__ftechProviderClicked) return 'Provedor já selecionado';
-        function tryClick() {
-            if (window.__ftechProviderClicked) return true;
-            const els = document.querySelectorAll('button, a, [role="button"], input[type="submit"]');
-            for (const el of els) {
-                const label = (el.innerText || el.textContent || el.value || '').trim().toLowerCase();
-                const r = el.getBoundingClientRect();
-                if (label === provider.toLowerCase() && r.width && r.height) {
-                    window.__ftechProviderClicked = true;
-                    el.click();
-                    return true;
-                }
-            }
-            return false;
-        }
-        if (tryClick()) return 'Provedor selecionado';
-        let n = 0;
-        const timer = setInterval(() => {
-            if (tryClick() || ++n >= 40) clearInterval(timer);
-        }, 350);
-        return 'Aguardando provedor';
-    })();
-    """.replace('__PROVIDER__', alvo)
-
-
-def criar_javascript_email(email, provider):
-    """Preenche somente o e-mail do Google ou Microsoft, sem armazenar senha."""
-    email = str(email or "").strip()
-    provider = str(provider or "").upper().strip()
-
-    if provider == "GOOGLE":
-        selectors = [
-            "#identifierId",
-            "input[name='identifier']",
-            "input[type='email']",
-        ]
-    else:
-        selectors = [
-            "#i0116",
-            "input[name='loginfmt']",
-            "input[type='email']",
-        ]
-
-    selectors_js = repr(", ".join(selectors))
-
-    return f"""
-    (function () {{
-        const EMAIL = {email!r};
-        const SELECTORS = {selectors_js};
-
-        function setNativeValue(element, value) {{
-            const descriptor = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype,
-                'value'
-            );
-
-            if (descriptor && descriptor.set) {{
-                descriptor.set.call(element, value);
-            }} else {{
-                element.value = value;
-            }}
-
-            element.dispatchEvent(new Event('input', {{ bubbles: true }}));
-            element.dispatchEvent(new Event('change', {{ bubbles: true }}));
-            element.dispatchEvent(new Event('blur', {{ bubbles: true }}));
-            element.focus();
-        }}
-
-        function fillEmail() {{
-            const field = document.querySelector(SELECTORS);
-            if (!field) return false;
-
-            if (!field.value || field.value.trim().toLowerCase() !== EMAIL.toLowerCase()) {{
-                setNativeValue(field, EMAIL);
-            }}
-
-            // Avança automaticamente para a etapa da senha.
-            if (!window.__ftechEmailSubmitted) {{
-                let nextButton = null;
-                if ({provider!r} === 'GOOGLE') {{
-                    nextButton = document.querySelector('#identifierNext button, #identifierNext');
-                }} else {{
-                    nextButton = document.querySelector('#idSIButton9, input[type=\"submit\"], button[type=\"submit\"]');
-                }}
-                if (nextButton && !nextButton.disabled) {{
-                    window.__ftechEmailSubmitted = true;
-                    setTimeout(function () {{ nextButton.click(); }}, 600);
-                }}
-            }}
-
-            return true;
-        }}
-
-        if (fillEmail()) return 'E-mail preenchido';
-
-        let attempts = 0;
-        const timer = setInterval(function () {{
-            attempts += 1;
-            if (fillEmail() || attempts >= 30) clearInterval(timer);
-        }}, 400);
-
-        return 'Aguardando campo de e-mail';
-    }})();
-    """
-
-def criar_javascript_senha(senha, provider):
-    """Preenche a senha do Google/Microsoft e avança somente quando o campo estiver disponível."""
-    senha = str(senha or "")
-    provider = str(provider or "").upper().strip()
-
-    if provider == "GOOGLE":
-        selectors = [
-            "input[name='Passwd']",
-            "input[type='password']",
-        ]
-        next_selectors = [
-            "#passwordNext button",
-            "#passwordNext",
-        ]
-    else:
-        selectors = [
-            "#i0118",
-            "input[name='passwd']",
-            "input[type='password']",
-        ]
-        next_selectors = [
-            "#idSIButton9",
-            "input[type='submit'][value='Sign in']",
-            "input[type='submit'][value='Entrar']",
-            "button[type='submit']",
-        ]
-
-    selectors_js = repr(", ".join(selectors))
-    next_selectors_js = repr(", ".join(next_selectors))
-
-    return f"""
-    (function () {{
-        const PASSWORD = {senha!r};
-        const PASSWORD_SELECTORS = {selectors_js};
-        const NEXT_SELECTORS = {next_selectors_js};
-
-        if (!PASSWORD) return 'Senha APPSHEET vazia';
-
-        function visible(element) {{
-            if (!element) return false;
-            const style = window.getComputedStyle(element);
-            const rect = element.getBoundingClientRect();
-            return style.display !== 'none' &&
-                   style.visibility !== 'hidden' &&
-                   rect.width > 0 && rect.height > 0;
-        }}
-
-        function setNativeValue(element, value) {{
-            const descriptor = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype, 'value'
-            );
-            if (descriptor && descriptor.set) {{
-                descriptor.set.call(element, value);
-            }} else {{
-                element.value = value;
-            }}
-            element.dispatchEvent(new Event('input', {{ bubbles: true }}));
-            element.dispatchEvent(new Event('change', {{ bubbles: true }}));
-            element.dispatchEvent(new KeyboardEvent('keyup', {{ bubbles: true, key: 'a' }}));
-            element.focus();
-        }}
-
-        function normalizarTexto(texto) {{
-            return (texto || '')
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/\\s+/g, ' ')
-                .trim()
-                .toLowerCase();
-        }}
-
-        function selecionarUsoDeSenhaMicrosoft() {{
-            if ({provider!r} !== 'MICROSOFT') return false;
-
-            // Em algumas contas a Microsoft oferece primeiro login por código.
-            // Nessa tela, escolhe explicitamente "Use sua senha" antes de procurar
-            // pelo campo de senha.
-            const elementos = document.querySelectorAll(
-                'a, button, [role="button"], input[type="button"], input[type="submit"]'
-            );
-
-            for (const elemento of elementos) {{
-                if (!visible(elemento) || elemento.disabled) continue;
-
-                const texto = normalizarTexto(
-                    elemento.innerText || elemento.textContent || elemento.value || ''
-                );
-
-                if (
-                    texto === 'use sua senha' ||
-                    texto === 'usar sua senha' ||
-                    texto === 'use your password' ||
-                    texto.includes('use sua senha') ||
-                    texto.includes('usar sua senha')
-                ) {{
-                    if (!window.__ftechUsePasswordClicked) {{
-                        window.__ftechUsePasswordClicked = true;
-                        elemento.scrollIntoView({{ block: 'center', inline: 'center' }});
-                        setTimeout(function () {{
-                            elemento.focus();
-                            elemento.click();
-                        }}, 350);
-                    }}
-                    return true;
-                }}
-            }}
-            return false;
-        }}
-
-        function localizarCampoSenha() {{
-            const fields = document.querySelectorAll(PASSWORD_SELECTORS);
-            for (const field of fields) {{
-                if (visible(field) && !field.disabled && !field.readOnly) return field;
-            }}
-            return null;
-        }}
-
-        function localizarBotaoAvancar() {{
-            const buttons = document.querySelectorAll(NEXT_SELECTORS);
-            for (const button of buttons) {{
-                if (visible(button) && !button.disabled) return button;
-            }}
-            return null;
-        }}
-
-        function preencherEAvancar() {{
-            if (window.__ftechPasswordSubmitted) return true;
-
-            const field = localizarCampoSenha();
-            if (!field) {{
-                selecionarUsoDeSenhaMicrosoft();
-                return false;
-            }}
-
-            if (field.value !== PASSWORD) {{
-                setNativeValue(field, PASSWORD);
-            }}
-
-            if (field.value !== PASSWORD) return false;
-
-            const button = localizarBotaoAvancar();
-            if (!button) return false;
-
-            window.__ftechPasswordSubmitted = true;
-            setTimeout(function () {{
-                button.focus();
-                button.click();
-            }}, 700);
-            return true;
-        }}
-
-        if (preencherEAvancar()) return 'Senha preenchida e login enviado';
-
-        if (!window.__ftechPasswordTimer) {{
-            let attempts = 0;
-            window.__ftechPasswordTimer = setInterval(function () {{
-                attempts += 1;
-                if (preencherEAvancar() || attempts >= 120) {{
-                    clearInterval(window.__ftechPasswordTimer);
-                    window.__ftechPasswordTimer = null;
-                }}
-            }}, 500);
-        }}
-
-        return 'Aguardando campo de senha';
-    }})();
-    """
-
-
-def criar_javascript_microsoft_continuar_conectado():
-    """Confirma automaticamente a tela 'Continuar conectado?' da Microsoft."""
-    return r"""
-    (function () {
-        function visible(element) {
-            if (!element) return false;
-            const style = window.getComputedStyle(element);
-            const rect = element.getBoundingClientRect();
-            return style.display !== 'none' &&
-                   style.visibility !== 'hidden' &&
-                   rect.width > 0 && rect.height > 0;
-        }
-
-        function normalizarTexto(texto) {
-            return (texto || '')
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .toLowerCase();
-        }
-
-        function confirmar() {
-            if (window.__ftechStaySignedInClicked) return true;
-
-            const pagina = normalizarTexto(document.body ? document.body.innerText : '');
-            const ehTelaConfirmacao =
-                pagina.includes('continuar conectado') ||
-                pagina.includes('stay signed in');
-
-            if (!ehTelaConfirmacao) return false;
-
-            // IDs usados pela Microsoft nessa confirmação, quando disponíveis.
-            const candidatosId = ['#idSIButton9', 'input#idSIButton9'];
-            for (const seletor of candidatosId) {
-                const botao = document.querySelector(seletor);
-                if (botao && visible(botao) && !botao.disabled) {
-                    window.__ftechStaySignedInClicked = true;
-                    setTimeout(function () { botao.click(); }, 350);
-                    return true;
-                }
-            }
-
-            // Fallback por texto para layouts novos da Microsoft.
-            const elementos = document.querySelectorAll(
-                'button, input[type="submit"], input[type="button"], [role="button"]'
-            );
-            for (const elemento of elementos) {
-                if (!visible(elemento) || elemento.disabled) continue;
-                const texto = normalizarTexto(
-                    elemento.innerText || elemento.textContent || elemento.value || ''
-                );
-                if (texto === 'sim' || texto === 'yes') {
-                    window.__ftechStaySignedInClicked = true;
-                    setTimeout(function () { elemento.click(); }, 350);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        if (confirmar()) return 'Continuar conectado confirmado';
-
-        if (!window.__ftechStaySignedInTimer) {
-            let attempts = 0;
-            window.__ftechStaySignedInTimer = setInterval(function () {
-                attempts += 1;
-                if (confirmar() || attempts >= 120) {
-                    clearInterval(window.__ftechStaySignedInTimer);
-                    window.__ftechStaySignedInTimer = null;
-                }
-            }, 500);
-        }
-        return 'Aguardando confirmação Microsoft';
-    })();
-    """
-
-
-def criar_javascript_openid(email, senha):
-    """Autenticação exclusivamente no Keycloak corporativo; não atua em outros domínios."""
-    payload = json.dumps({"email": str(email or ""), "senha": str(senha or "")}, ensure_ascii=False)
-    return r"""
-    (function () {
-        const host = location.hostname.toLowerCase();
-        if (host !== 'auth.lhftech.com.br') return 'Domínio externo: preenchimento desabilitado';
-        if (window.__ftechOidcSubmitted) return 'Autenticação já enviada';
-        if (sessionStorage.getItem('ftech_oidc_attempted') === '1') return 'Tentativa anterior; verifique a autenticação manualmente';
-        const cred = __CREDENTIALS__;
-        let n = 0;
-        function setInput(el, value) {
-            const proto = window.HTMLInputElement.prototype;
-            const setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
-            setter.call(el, value);
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        function step() {
-            if (window.__ftechOidcSubmitted) return true;
-            const user = document.querySelector('input#username, input[name="username"], input[autocomplete="username"], input[type="email"]');
-            const pass = document.querySelector('input#password, input[name="password"], input[autocomplete="current-password"]');
-            if (!user || !pass || !cred.email || !cred.senha) return false;
-            setInput(user, cred.email);
-            setInput(pass, cred.senha);
-            const remember = document.querySelector('input#rememberMe, input[name="rememberMe"], input[type="checkbox"][name*="remember"]');
-            if (remember && !remember.checked && !remember.disabled) remember.click();
-            const form = pass.closest('form') || user.closest('form');
-            const submit = (form || document).querySelector('button[type="submit"], input[type="submit"], button#kc-login, input#kc-login');
-            if (!submit) return false;
-            window.__ftechOidcSubmitted = true;
-            sessionStorage.setItem('ftech_oidc_attempted', '1');
-            setTimeout(() => submit.click(), 300);
-            return true;
-        }
-        if (step()) return 'Formulário OpenID enviado';
-        const timer = setInterval(() => { if (step() || ++n >= 35) clearInterval(timer); }, 400);
-        return 'Aguardando formulário OpenID';
-    })();
-    """.replace('__CREDENTIALS__', payload)
-
-
-def criar_javascript_aceite_appsheet():
-    """Aceita o consentimento do AppSheet quando a tela específica aparece."""
-    return r"""
-    (function () {
-        if (!location.hostname.toLowerCase().endsWith('appsheet.com')) return 'Fora do AppSheet';
-        if (window.__ftechConsentClicked) return 'Aceite já enviado';
-        function step() {
-            if (window.__ftechConsentClicked) return true;
-            const txt = (document.body?.innerText || '').toLowerCase();
-            const consent = txt.includes('criador dele pode receber') ||
-                txt.includes('app creator may receive') ||
-                (txt.includes('cancelar') && txt.includes('aceitar') && txt.includes('informações'));
-            if (!consent) return false;
-            const buttons = document.querySelectorAll('button, input[type="submit"], [role="button"]');
-            for (const el of buttons) {
-                const label = (el.innerText || el.value || el.textContent || '').trim().toLowerCase();
-                if (label === 'aceitar' || label === 'accept') {
-                    window.__ftechConsentClicked = true;
-                    el.click();
-                    return true;
-                }
-            }
-            return false;
-        }
-        if (step()) return 'Aceite enviado';
-        let n = 0;
-        const timer = setInterval(() => { if (step() || ++n >= 25) clearInterval(timer); }, 400);
-        return 'Aguardando possível consentimento';
-    })();
-    """
-
-
-def criar_javascript_tela_aguarde():
-    """Cobre as telas de autenticação para impedir interação do usuário durante o login automático."""
-    return r"""
-    (function () {
-        if (document.getElementById('ftech-login-overlay')) return 'Tela de aguarde já ativa';
-        if (window.__ftechOverlayTimeoutExpirado) return 'Tela de aguarde removida para diagnóstico';
-        if (!document.documentElement) return 'Documento ainda não disponível';
-
-        // No AppSheet, cobre somente a tela de escolha do provedor.
-        // Depois que o aplicativo estiver autenticado, não cria a cobertura.
-        if ((location.hostname || '').toLowerCase().includes('appsheet.com')) {
-            const elementos = Array.from(document.querySelectorAll('button, a, [role="button"], div[tabindex]'));
-            const temProvedor = elementos.some(function (el) {
-                const texto = (el.innerText || el.textContent || '').trim().toLowerCase();
-                return texto === 'google' || texto === 'microsoft' || texto === 'login';
-            });
-            const consentimento = (document.body?.innerText || '').toLowerCase().includes('criador dele pode receber');
-            if (!temProvedor && !consentimento) return 'AppSheet autenticado';
-        }
-
-        const overlay = document.createElement('div');
-        overlay.id = 'ftech-login-overlay';
-        overlay.style.cssText = [
-            'position:fixed','inset:0','z-index:2147483647',
-            'background:#1f4e78','display:flex','align-items:center',
-            'justify-content:center','font-family:Segoe UI,Arial,sans-serif',
-            'color:white','user-select:none','cursor:wait'
-        ].join(';');
-        const caixa = document.createElement('div');
-        caixa.style.cssText = 'text-align:center;padding:40px;max-width:520px';
-
-        const titulo = document.createElement('div');
-        titulo.style.cssText = 'font-size:34px;font-weight:700;margin-bottom:12px';
-        titulo.textContent = 'FTECH';
-
-        const status = document.createElement('div');
-        status.style.cssText = 'font-size:20px;font-weight:600;margin-bottom:8px';
-        status.textContent = 'Entrando no sistema...';
-
-        const mensagem = document.createElement('div');
-        mensagem.style.cssText = 'font-size:14px;opacity:.9;margin-bottom:28px';
-        mensagem.textContent = 'Aguarde enquanto preparamos seu acesso.';
-
-        const spinner = document.createElement('div');
-        spinner.style.cssText = 'width:46px;height:46px;border:5px solid rgba(255,255,255,.30);border-top-color:white;border-radius:50%;margin:0 auto;animation:ftechSpin .85s linear infinite';
-
-        caixa.appendChild(titulo);
-        caixa.appendChild(status);
-        caixa.appendChild(mensagem);
-        caixa.appendChild(spinner);
-        overlay.appendChild(caixa);
-
-        const style = document.createElement('style');
-        style.id = 'ftech-login-overlay-style';
-        style.textContent = '@keyframes ftechSpin{to{transform:rotate(360deg)}}';
-        (document.head || document.documentElement).appendChild(style);
-        (document.body || document.documentElement).appendChild(overlay);
-
-        // Se esta etapa do login não avançar, libera a tela real para diagnóstico.
-        // A cada nova página do provedor o contador reinicia automaticamente.
-        setTimeout(function () {
-            const atual = document.getElementById('ftech-login-overlay');
-            if (atual) {
-                atual.remove();
-                const estilo = document.getElementById('ftech-login-overlay-style');
-                if (estilo) estilo.remove();
-                window.__ftechOverlayTimeoutExpirado = true;
-                console.warn('FTECH: autenticação não avançou em 15 segundos; tela real liberada para diagnóstico.');
-            }
-        }, 15000);
-
-        return 'Tela de aguarde ativada';
-    })();
-    """
-
-def criar_javascript_aguarde_document_start():
-    """Mostra a tela FTECH antes de Google/Microsoft renderizarem o login."""
-    return r"""
-    (function () {
-        const host = (location.hostname || '').toLowerCase();
-        const ehLoginExterno =
-            host === 'accounts.google.com' ||
-            host.includes('login.microsoftonline.com') ||
-            host.includes('login.live.com') ||
-            host.includes('login.microsoft.com') ||
-            host === 'auth.lhftech.com.br';
-
-        if (!ehLoginExterno) return;
-
-        function instalar() {
-            if (window.__ftechOverlayTimeoutExpirado) return;
-            if (document.getElementById('ftech-login-overlay')) return;
-            if (!document.documentElement) {
-                setTimeout(instalar, 10);
-                return;
-            }
-
-            const style = document.createElement('style');
-            style.id = 'ftech-login-overlay-style';
-            style.textContent = `
-                @keyframes ftechSpin { to { transform: rotate(360deg); } }
-                #ftech-login-overlay {
-                    position: fixed !important;
-                    inset: 0 !important;
-                    z-index: 2147483647 !important;
-                    background: #1f4e78 !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    font-family: 'Segoe UI', Arial, sans-serif !important;
-                    color: white !important;
-                    user-select: none !important;
-                    cursor: wait !important;
-                }
-            `;
-            (document.head || document.documentElement).appendChild(style);
-
-            const overlay = document.createElement('div');
-            overlay.id = 'ftech-login-overlay';
-            const caixa = document.createElement('div');
-            caixa.style.cssText = 'text-align:center;padding:40px;max-width:520px';
-
-            const titulo = document.createElement('div');
-            titulo.style.cssText = 'font-size:34px;font-weight:700;margin-bottom:12px';
-            titulo.textContent = 'FTECH';
-
-            const status = document.createElement('div');
-            status.style.cssText = 'font-size:20px;font-weight:600;margin-bottom:8px';
-            status.textContent = 'Entrando no sistema...';
-
-            const mensagem = document.createElement('div');
-            mensagem.style.cssText = 'font-size:14px;opacity:.9;margin-bottom:28px';
-            mensagem.textContent = 'Aguarde enquanto preparamos seu acesso.';
-
-            const spinner = document.createElement('div');
-            spinner.style.cssText = 'width:46px;height:46px;border:5px solid rgba(255,255,255,.30);border-top-color:white;border-radius:50%;margin:0 auto;animation:ftechSpin .85s linear infinite';
-
-            caixa.appendChild(titulo);
-            caixa.appendChild(status);
-            caixa.appendChild(mensagem);
-            caixa.appendChild(spinner);
-            overlay.appendChild(caixa);
-            (document.body || document.documentElement).appendChild(overlay);
-
-            // Segurança para diagnóstico: se o login ficar parado nesta página,
-            // remove a cobertura e deixa o usuário enxergar a etapa real.
-            setTimeout(function () {
-                const atual = document.getElementById('ftech-login-overlay');
-                if (atual) {
-                    atual.remove();
-                    const estilo = document.getElementById('ftech-login-overlay-style');
-                    if (estilo) estilo.remove();
-                    window.__ftechOverlayTimeoutExpirado = true;
-                    console.warn('FTECH: autenticação não avançou em 15 segundos; tela real liberada para diagnóstico.');
-                }
-            }, 15000);
-        }
-
-        instalar();
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', instalar, { once: true });
-        }
-    })();
-    """
-
-
-def habilitar_autofill_senhas_webview2():
-    """
-    Habilita o preenchimento geral e o salvamento de senhas no WebView2.
-
-    O pywebview não expõe essas opções diretamente. Por isso, esta função
-    aplica um pequeno ajuste no evento interno de inicialização do WebView2.
-    Caso uma propriedade não exista na versão instalada, ela é ignorada.
-    """
-    try:
-        from webview.platforms import edgechromium
-
-        edge_class = edgechromium.EdgeChrome
-
-        if getattr(edge_class, "_ftech_password_patch", False):
-            return True
-
-        original_on_webview_ready = edge_class.on_webview_ready
-
-        def on_webview_ready_com_senhas(self, sender, args):
-            # Mantém todo o comportamento original do pywebview.
-            original_on_webview_ready(self, sender, args)
-
-            try:
-                if not args.IsSuccess:
-                    return
-
-                core = sender.CoreWebView2
-                if core is None:
-                    return
-
-                # Instala a cobertura antes de cada navegação externa de login.
-                # Isso impede que as telas Google/Microsoft apareçam por alguns
-                # instantes antes do JavaScript executado no evento loaded.
-                try:
-                    core.AddScriptToExecuteOnDocumentCreatedAsync(
-                        criar_javascript_aguarde_document_start()
+            usuario, nome, senha, provedor, email, appsheet_senha, url = self.validate()
+            ativo = 1 if self.ativo.get() else 0
+            trocar_senha = 1 if self.trocar_senha.get() else 0
+
+            with get_connection() as connection:
+                cursor = connection.cursor()
+                if self.selected_user_id is None:
+                    password_hash, salt = generate_password_hash(senha)
+                    cursor.execute(
+                        """
+                        INSERT INTO dbo.FTECH_USUARIOS_APP
+                        (USUARIO, NOME_COMPLETO, SENHA_HASH, SENHA_SALT,
+                         PROVEDOR_LOGIN, EMAIL_APPSHEET, APPSHEET_SENHA, APPSHEET_URL,
+                         ATIVO, TROCAR_SENHA_PROXIMO_LOGIN,
+                         BLOQUEADO, TENTATIVAS_LOGIN)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)
+                        """,
+                        usuario, nome, password_hash, salt, provedor, email, appsheet_senha, url,
+                        ativo, trocar_senha,
                     )
-                except Exception as error:
-                    print(f"Não foi possível preparar a tela de aguarde antecipada: {error}")
+                elif senha:
+                    password_hash, salt = generate_password_hash(senha)
+                    cursor.execute(
+                        """
+                        UPDATE dbo.FTECH_USUARIOS_APP
+                        SET USUARIO=?, NOME_COMPLETO=?, SENHA_HASH=?, SENHA_SALT=?,
+                            PROVEDOR_LOGIN=?, EMAIL_APPSHEET=?, APPSHEET_SENHA=?, APPSHEET_URL=?, ATIVO=?,
+                            TROCAR_SENHA_PROXIMO_LOGIN=?,
+                            DATA_ALTERACAO=SYSDATETIME()
+                        WHERE ID_USUARIO=?
+                        """,
+                        usuario, nome, password_hash, salt, provedor, email, appsheet_senha, url,
+                        ativo, trocar_senha, self.selected_user_id,
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        UPDATE dbo.FTECH_USUARIOS_APP
+                        SET USUARIO=?, NOME_COMPLETO=?, PROVEDOR_LOGIN=?,
+                            EMAIL_APPSHEET=?, APPSHEET_SENHA=?, APPSHEET_URL=?, ATIVO=?,
+                            TROCAR_SENHA_PROXIMO_LOGIN=?,
+                            DATA_ALTERACAO=SYSDATETIME()
+                        WHERE ID_USUARIO=?
+                        """,
+                        usuario, nome, provedor, email, appsheet_senha, url, ativo,
+                        trocar_senha, self.selected_user_id,
+                    )
+                connection.commit()
 
-                settings = core.Settings
+            messagebox.showinfo("Sucesso", "Usuário salvo com sucesso.")
+            self.clear_form()
+            self.load_users()
+        except pyodbc.IntegrityError:
+            messagebox.showerror("Erro", "Já existe um usuário com esse nome.")
+        except Exception as error:
+            messagebox.showerror("Erro", str(error))
 
-                # Propriedades disponíveis conforme a versão do SDK WebView2.
-                for property_name in (
-                    "IsGeneralAutofillEnabled",
-                    "IsPasswordAutosaveEnabled",
-                    "IsPasswordAutofillEnabled",
-                ):
-                    try:
-                        if hasattr(settings, property_name):
-                            setattr(settings, property_name, True)
-                    except Exception as error:
-                        print(
-                            f"Não foi possível ativar {property_name} "
-                            f"em Settings: {error}"
-                        )
-
-                # Algumas versões também expõem as opções no Profile.
-                try:
-                    profile = core.Profile
-                except Exception:
-                    profile = None
-
-                if profile is not None:
-                    for property_name in (
-                        "IsGeneralAutofillEnabled",
-                        "IsPasswordAutosaveEnabled",
-                    ):
-                        try:
-                            if hasattr(profile, property_name):
-                                setattr(profile, property_name, True)
-                        except Exception as error:
-                            print(
-                                f"Não foi possível ativar {property_name} "
-                                f"no Profile: {error}"
-                            )
-
-                print(
-                    "WebView2: preenchimento automático e salvamento "
-                    "de senhas habilitados."
-                )
-
-            except Exception as error:
-                # Uma falha nessa configuração não deve impedir o AppSheet.
-                print(f"Erro ao habilitar o gerenciador de senhas: {error}")
-
-        edge_class.on_webview_ready = on_webview_ready_com_senhas
-        edge_class._ftech_password_patch = True
+    def require_selection(self):
+        if self.selected_user_id is None:
+            messagebox.showwarning("Seleção", "Selecione um usuário na lista.")
+            return False
         return True
 
-    except Exception as error:
-        print(f"Não foi possível preparar o autofill do WebView2: {error}")
-        return False
+    def unlock_user(self):
+        if not self.require_selection():
+            return
+        with get_connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "UPDATE dbo.FTECH_USUARIOS_APP SET BLOQUEADO=0, TENTATIVAS_LOGIN=0 WHERE ID_USUARIO=?",
+                self.selected_user_id,
+            )
+            connection.commit()
+        self.load_users()
 
+    def toggle_active(self):
+        if not self.require_selection():
+            return
+        with get_connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "UPDATE dbo.FTECH_USUARIOS_APP SET ATIVO=CASE WHEN ATIVO=1 THEN 0 ELSE 1 END WHERE ID_USUARIO=?",
+                self.selected_user_id,
+            )
+            connection.commit()
+        self.load_users()
 
-def open_appsheet(user):
-    username = sanitize_username(user["usuario"])
-    provider = str(user["provedor"]).upper().strip()
-    email_appsheet = str(user.get("email_appsheet") or "").strip()
-    appsheet_senha = str(user.get("appsheet_senha") or "")
-    appsheet_url = user.get("appsheet_url") or APPSHEET_URL_PADRAO
+    def delete_user(self):
+        if not self.require_selection():
+            return
+        if not messagebox.askyesno("Confirmar", "Excluir o usuário selecionado e seus logs?"):
+            return
+        with get_connection() as connection:
+            cursor = connection.cursor()
+            cursor.execute("DELETE FROM dbo.FTECH_USUARIOS_APP_LOG WHERE ID_USUARIO=?", self.selected_user_id)
+            cursor.execute("DELETE FROM dbo.FTECH_USUARIOS_APP WHERE ID_USUARIO=?", self.selected_user_id)
+            connection.commit()
+        self.clear_form()
+        self.load_users()
 
-    base = os.getenv("LOCALAPPDATA") or get_application_directory()
-    profile = os.path.join(base, "FTECH", "webview_profiles", provider, username)
-    os.makedirs(profile, exist_ok=True)
-
-    preferencias_path = os.path.join(
-        base, "FTECH", "preferencias", f"{provider}_{username}.json"
-    )
-    preferencias = PreferenciasWeb(preferencias_path)
-
-    zoom_js = ZOOM_JS.replace(
-        "__FTECH_INITIAL_ZOOM__", repr(preferencias.dados["zoom"])
-    )
-    theme_js = THEME_JS.replace(
-        "__FTECH_INITIAL_DARK__",
-        "true" if preferencias.dados["tema"] == "escuro" else "false",
-    )
-
-    webview.settings["ALLOW_DOWNLOADS"] = True
-
-    window = webview.create_window(
-        title=(
-            f"FTECH | Alta Paulista | {user['nome_completo']} | "
-            f"{email_appsheet}"
-        ),
-        url=appsheet_url,
-        width=1200,
-        height=800,
-        min_size=(900, 600),
-        resizable=True,
-        js_api=preferencias,
-    )
-
-    provider_js = criar_javascript_provedor(provider)
-    email_js = criar_javascript_email(email_appsheet, provider)
-    senha_js = criar_javascript_senha(appsheet_senha, provider)
-    microsoft_continuar_js = criar_javascript_microsoft_continuar_conectado()
-    aguarde_js = criar_javascript_tela_aguarde()
-    openid_js = criar_javascript_openid(email_appsheet, appsheet_senha)
-    consent_js = criar_javascript_aceite_appsheet()
-
-    def configurar_janela(janela):
-        def on_loaded():
-            try:
-                current_url = (janela.get_current_url() or "").lower()
-
-                # Zoom nas páginas do AppSheet.
-                if "appsheet.com" in current_url:
-                    try:
-                        janela.evaluate_js(zoom_js)
-                    except Exception as error:
-                        print(f"Erro ao instalar zoom: {error}")
-
-                    try:
-                        janela.evaluate_js(theme_js)
-                    except Exception as error:
-                        print(f"Erro ao instalar seletor de tema: {error}")
-
-                    # Na tela de escolha, seleciona automaticamente o provedor.
-                    try:
-                        janela.evaluate_js(provider_js)
-                        janela.evaluate_js(consent_js)
-                        janela.evaluate_js(aguarde_js)
-                    except Exception as error:
-                        print(f"Erro ao selecionar provedor: {error}")
-
-                if provider == "OPENID" and "auth.lhftech.com.br" in current_url:
-                    try:
-                        janela.evaluate_js(aguarde_js)
-                        janela.evaluate_js(openid_js)
-                    except Exception as error:
-                        print(f"Erro no fluxo OpenID: {type(error).__name__}")
-
-                # Google: tenta preencher e-mail e senha automaticamente usando
-                # os campos normais da página. A tela de aguarde possui timeout;
-                # se o Google exigir verificação adicional, ela desaparece e o
-                # usuário pode concluir essa etapa manualmente.
-                if provider == "GOOGLE" and "accounts.google.com" in current_url:
-                    try:
-                        janela.evaluate_js(aguarde_js)
-                        janela.evaluate_js(email_js)
-                        janela.evaluate_js(senha_js)
-                    except Exception as error:
-                        print(f"Erro ao preencher login Google: {error}")
-
-                elif provider == "MICROSOFT" and (
-                    "login.microsoftonline.com" in current_url
-                    or "login.live.com" in current_url
-                    or "login.microsoft.com" in current_url
-                ):
-                    try:
-                        janela.evaluate_js(aguarde_js)
-                        janela.evaluate_js(email_js)
-                        janela.evaluate_js(senha_js)
-                        janela.evaluate_js(microsoft_continuar_js)
-                    except Exception as error:
-                        print(f"Erro ao preencher login Microsoft: {error}")
-
-            except Exception as error:
-                print(f"Erro ao tratar página carregada: {error}")
-
-        janela.events.loaded += on_loaded
-
-    configurar_janela(window)
-
-    def abrir_nova_janela():
-        nova_janela = webview.create_window(
-            title=(
-                f"FTECH | Alta Paulista | {user['nome_completo']} | "
-                f"{email_appsheet}"
-            ),
-            url=appsheet_url,
-            width=1200,
-            height=800,
-            min_size=(900, 600),
-            resizable=True,
-            js_api=preferencias,
-        )
-        configurar_janela(nova_janela)
-
-    preferencias.abrir_nova_janela_callback = abrir_nova_janela
-
-    # Ativa o gerenciador de senhas nativo do WebView2 antes da inicialização.
-    habilitar_autofill_senhas_webview2()
-
-    webview.start(
-        gui="edgechromium",
-        private_mode=False,
-        storage_path=profile,
-        debug=False,
-    )
-
-def main():
-    if verify_and_install_update():
-        sys.exit(0)
-
-    user = LoginWindow().show()
-    if not user:
-        sys.exit(0)
-
-    open_appsheet(user)
+    def run(self):
+        self.root.mainloop()
 
 
 if __name__ == "__main__":
-    main()
+    UserAdminApp().run()

@@ -16,19 +16,16 @@ from tkinter import messagebox, ttk
 import pyodbc
 import requests
 import webview
-from dotenv import load_dotenv
 from packaging.version import Version, InvalidVersion
 from PIL import Image, ImageTk
 
-load_dotenv()
-
 APP_NAME = "FTECH App"
-APP_VERSION = os.getenv("APP_VERSION", "2.0.16").strip()
-SQL_SERVER = os.getenv("SQL_SERVER", "").strip()
-SQL_DATABASE = os.getenv("SQL_DATABASE", "").strip()
-SQL_USER = os.getenv("SQL_USER", "").strip()
-SQL_PASSWORD = os.getenv("SQL_PASSWORD", "").strip()
-SQL_DRIVER = os.getenv("SQL_DRIVER", "ODBC Driver 17 for SQL Server").strip()
+APP_VERSION = os.getenv("APP_VERSION", "2.0.17").strip()
+SQL_SERVER = "188.220.168.222"
+SQL_DATABASE = "FTECH"
+SQL_USER = "ftech"
+SQL_PASSWORD = "ftech@1975"
+SQL_DRIVER = "ODBC Driver 17 for SQL Server"
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "300"))
 MAX_TENTATIVAS = 5
 
@@ -65,6 +62,16 @@ ZOOM_JS = r"""
 
         }
         applyZoom();
+
+        // Sincroniza zoom entre todas as guias do mesmo perfil WebView2.
+        window.addEventListener('storage', function (e) {
+            if (e.key !== 'ftech_zoom' || e.newValue === null) return;
+            const recebido = parseFloat(e.newValue);
+            if (Number.isFinite(recebido)) {
+                zoom = recebido;
+                applyZoom();
+            }
+        });
 
         window.addEventListener('wheel', function (e) {
             if (!e.ctrlKey) return;
@@ -215,6 +222,13 @@ THEME_JS = r"""
 
         document.body.appendChild(button);
         aplicarTema();
+
+        // Mantem o tema consistente ao mudar em outra guia.
+        window.addEventListener('storage', function (e) {
+            if (e.key !== 'ftech_tema' || e.newValue === null) return;
+            temaEscuro = e.newValue === 'escuro';
+            aplicarTema();
+        });
     }
 
     if (document.readyState === 'loading') {
@@ -318,6 +332,25 @@ class PreferenciasWeb:
         except OSError:
             return False
 
+    def abrir_link_em_guia(self, url):
+        """Abre o endereço em outra guia da própria janela FTECH."""
+        callback = getattr(self, "abrir_link_em_guia_callback", None)
+        if callable(callback):
+            return callback(url)
+        return False
+
+    def selecionar_guia(self, indice):
+        callback = getattr(self, "selecionar_guia_callback", None)
+        if callable(callback):
+            return callback(indice)
+        return False
+
+    def fechar_guia(self, indice):
+        callback = getattr(self, "fechar_guia_callback", None)
+        if callable(callback):
+            return callback(indice)
+        return False
+
     def abrir_nova_janela(self):
         if callable(self.abrir_nova_janela_callback):
             self.abrir_nova_janela_callback()
@@ -335,7 +368,7 @@ def get_sql_connection():
         ) if not value
     ]
     if missing:
-        raise RuntimeError("Configurações ausentes no .env: " + ", ".join(missing))
+        raise RuntimeError("Configurações SQL ausentes no código: " + ", ".join(missing))
 
     conn_str = (
         f"DRIVER={{{SQL_DRIVER}}};"
@@ -1124,6 +1157,8 @@ def criar_javascript_provedor(provider):
         provider_text = "Google"
     elif provider == "MICROSOFT":
         provider_text = "Microsoft"
+    elif provider in ("OPENID", "OIDC", "OPENID CONNECT"):
+        provider_text = "Login"
     else:
         return "(function(){ return 'Provedor não reconhecido'; })();"
 
@@ -1183,6 +1218,99 @@ def criar_javascript_provedor(provider):
 
         return 'Aguardando botão do provedor';
     }})();
+    """
+
+
+
+def criar_javascript_login_openid(email, senha):
+    """Autentica no Keycloak do FTECH sem interferir em outros provedores."""
+    email_js = json.dumps(str(email or "").strip(), ensure_ascii=False)
+    senha_js = json.dumps(str(senha or ""), ensure_ascii=False)
+    return r"""
+    (function () {
+        const USER = __USER__;
+        const PASSWORD = __PASSWORD__;
+        if (!USER || !PASSWORD) return 'Credenciais OpenID incompletas';
+        if (window.__ftechOidcSubmitting) return 'Aguardando retorno do login';
+        if (window.__ftechOidcTimer) return 'Login OpenID em andamento';
+
+        function visivel(el) {
+            return !!el && !el.disabled && !el.readOnly &&
+              el.getClientRects().length > 0 &&
+              getComputedStyle(el).visibility !== 'hidden';
+        }
+        function escrever(el, valor) {
+            if (el.value === valor) return;
+            const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+            if (desc && desc.set) desc.set.call(el, valor);
+            else el.value = valor;
+            el.dispatchEvent(new Event('input', {bubbles:true}));
+            el.dispatchEvent(new Event('change', {bubbles:true}));
+        }
+        function tentar() {
+            if (window.__ftechOidcSubmitting) return true;
+            const usuario = Array.from(document.querySelectorAll(
+               '#username, input[name="username"], input[autocomplete="username"], input[type="email"]'
+            )).find(visivel);
+            const senha = Array.from(document.querySelectorAll(
+               '#password, input[name="password"], input[autocomplete="current-password"], input[type="password"]'
+            )).find(visivel);
+            if (!usuario || !senha) return false;
+            escrever(usuario, USER);
+            escrever(senha, PASSWORD);
+            if (usuario.value !== USER || senha.value !== PASSWORD) return false;
+            const lembrar = document.querySelector(
+              '#rememberMe, input[name="rememberMe"], input[name="remember-me"], input[id*="remember"]'
+            );
+            if (lembrar && lembrar.type === 'checkbox' && !lembrar.checked && !lembrar.disabled) {
+                lembrar.click();
+            }
+            const form = senha.form || usuario.form || document.querySelector('#kc-form-login');
+            const botao = document.querySelector('#kc-login') ||
+               (form && form.querySelector('button[type="submit"],input[type="submit"]'));
+            if (!form && !botao) return false;
+            window.__ftechOidcSubmitting = true;
+            setTimeout(function () {
+                if (botao && visivel(botao)) botao.click();
+                else if (form) {
+                    if (form.requestSubmit) form.requestSubmit();
+                    else form.submit();
+                }
+            }, 500);
+            return true;
+        }
+        if (tentar()) return 'Login OpenID enviado';
+        let n = 0;
+        window.__ftechOidcTimer = setInterval(function () {
+            n++;
+            if (tentar() || n >= 45) {
+                clearInterval(window.__ftechOidcTimer);
+                window.__ftechOidcTimer = null;
+            }
+        }, 400);
+        return 'Aguardando formulário OpenID';
+    })();
+    """.replace('__USER__', email_js).replace('__PASSWORD__', senha_js)
+
+
+def criar_javascript_consentimento_openid():
+    """Aceita apenas eventual tela explícita de consentimento do AppSheet."""
+    return r"""
+    (function () {
+        if (window.__ftechConsentClicked) return;
+        const corpo = (document.body && document.body.innerText || '').toLowerCase();
+        if (!(/(appsheet)/i.test(corpo) &&
+              /(permissions|permissões|permissoes|consent|consentimento|authorize|autorizar)/i.test(corpo))) return;
+        const candidatos = document.querySelectorAll('button, input[type="submit"], [role="button"]');
+        for (const el of candidatos) {
+            const t = (el.innerText || el.value || '').trim().toLowerCase();
+            if (!['accept', 'aceitar', 'allow', 'permitir', 'authorize', 'autorizar'].includes(t)) continue;
+            if (!el.getClientRects().length || el.disabled) continue;
+            window.__ftechConsentClicked = true;
+            el.click();
+            break;
+        }
+    })();
     """
 
 
@@ -1677,6 +1805,388 @@ def criar_javascript_aguarde_document_start():
     """
 
 
+# As guias são controles NATIVOS WinForms/WebView2.
+# Cada guia mantém seu próprio documento, histórico e formulários abertos.
+# O AppSheet principal continua gerenciado pelo pywebview original.
+class GuiasNativasFTECH:
+    """Guias com botões WinForms, cada uma preservando seu WebView2."""
+
+    def __init__(self, url_principal, zoom_js, theme_js):
+        self.url_principal = url_principal
+        self.zoom_js = zoom_js
+        self.theme_js = theme_js
+        self.form = None
+        self.principal = None
+        self.barra = None
+        self.area = None
+        self.layout = None
+        self.botoes = None
+        self.guias = []
+        self.ativa = 0
+        self._handlers = []
+        self._numero = 1
+        # Cobertura WinForms independente das paginas/redirecionamentos do SSO.
+        self.openid_aguarde_ativo = False
+        self.openid_inicio = None
+        self.openid_painel = None
+        self.openid_timer = None
+        self.openid_visitou_keycloak = False
+
+    def _instalar_aguarde_openid(self):
+        """Oculta o login automatizado, inclusive ao navegar entre dominios."""
+        import System.Windows.Forms as Forms
+        from System.Drawing import Color, Font, FontStyle, ContentAlignment
+        self.openid_inicio = time.monotonic()
+        painel = Forms.Panel()
+        painel.Dock = Forms.DockStyle.Fill
+        painel.BackColor = Color.FromArgb(31, 78, 120)
+        painel.Cursor = Forms.Cursors.WaitCursor
+        grade = Forms.TableLayoutPanel()
+        grade.Dock = Forms.DockStyle.Fill
+        grade.ColumnCount = 3
+        grade.RowCount = 5
+        grade.ColumnStyles.Add(Forms.ColumnStyle(Forms.SizeType.Percent, 50.0))
+        grade.ColumnStyles.Add(Forms.ColumnStyle(Forms.SizeType.Absolute, 460.0))
+        grade.ColumnStyles.Add(Forms.ColumnStyle(Forms.SizeType.Percent, 50.0))
+        for pct in (34.0, 11.0, 9.0, 9.0, 37.0):
+            grade.RowStyles.Add(Forms.RowStyle(Forms.SizeType.Percent, pct))
+        titulo = Forms.Label()
+        titulo.Text = 'FTECH'
+        titulo.Font = Font('Segoe UI', 27.0, FontStyle.Bold)
+        titulo.ForeColor = Color.White
+        titulo.Dock = Forms.DockStyle.Fill
+        titulo.TextAlign = ContentAlignment.MiddleCenter
+        mensagem = Forms.Label()
+        mensagem.Text = 'Entrando no sistema...'
+        mensagem.Font = Font('Segoe UI', 17.0, FontStyle.Bold)
+        mensagem.ForeColor = Color.White
+        mensagem.Dock = Forms.DockStyle.Fill
+        mensagem.TextAlign = ContentAlignment.MiddleCenter
+        descricao = Forms.Label()
+        descricao.Text = 'Aguarde enquanto preparamos seu acesso.'
+        descricao.Font = Font('Segoe UI', 11.0)
+        descricao.ForeColor = Color.White
+        descricao.Dock = Forms.DockStyle.Fill
+        descricao.TextAlign = ContentAlignment.MiddleCenter
+        barra = Forms.ProgressBar()
+        barra.Style = Forms.ProgressBarStyle.Marquee
+        barra.MarqueeAnimationSpeed = 24
+        barra.Dock = Forms.DockStyle.Top
+        grade.Controls.Add(titulo, 1, 1)
+        grade.Controls.Add(mensagem, 1, 2)
+        grade.Controls.Add(descricao, 1, 3)
+        grade.Controls.Add(barra, 1, 4)
+        painel.Controls.Add(grade)
+        self.area.Controls.Add(painel)
+        self.openid_painel = painel
+        painel.BringToFront()
+        # Não registra WebMessageReceived: o pywebview também usa essa fila
+        # para sua bridge JavaScript e espera exclusivamente mensagens internas.
+        # Qualquer postMessage personalizado causava on_script_notify ValueError.
+        timer = Forms.Timer()
+        timer.Interval = 700
+        timer.Tick += self._verificar_openid
+        self._handlers.append(self._verificar_openid)
+        self.openid_timer = timer
+        timer.Start()
+
+    def _encerrar_aguarde_openid(self, timeout=False):
+        if not self.openid_aguarde_ativo:
+            return
+        self.openid_aguarde_ativo = False
+        if self.openid_timer is not None:
+            self.openid_timer.Stop()
+            self.openid_timer.Dispose()
+            self.openid_timer = None
+        if self.openid_painel is not None:
+            self.area.Controls.Remove(self.openid_painel)
+            self.openid_painel.Dispose()
+            self.openid_painel = None
+        if timeout:
+            print('FTECH: login OpenID ainda não concluído; tela liberada para verificação manual.')
+
+    def _navegacao_login_openid(self, sender, args):
+        """Oculta somente a digitação; devolve o controle ao loader do AppSheet.
+
+        Este evento nativo não envia WebMessages ao pywebview. Quando o
+        Keycloak recebe o POST do formulário, a cobertura já pode sair.
+        """
+        if not self.openid_aguarde_ativo:
+            return
+        try:
+            from urllib.parse import urlsplit
+            destino = urlsplit(str(args.Uri or ''))
+            host = (destino.hostname or '').lower()
+            caminho = (destino.path or '').lower()
+            if host == 'auth.lhftech.com.br':
+                self.openid_visitou_keycloak = True
+                if '/login-actions/authenticate' in caminho:
+                    # O browser já enviou as credenciais. O AppSheet pode
+                    # exibir a animação de inicialização personalizada.
+                    self._encerrar_aguarde_openid()
+            elif self.openid_visitou_keycloak and (
+                host == 'appsheet.com' or host.endswith('.appsheet.com')
+            ):
+                # Abrange SSO previamente autenticado e redirecionamentos
+                # que não passam pelo POST visível do formulário.
+                self._encerrar_aguarde_openid()
+        except Exception as exc:
+            print('FTECH: falha ao acompanhar navegação OpenID:', exc)
+
+    def _verificar_openid(self, sender, args):
+        if not self.openid_aguarde_ativo:
+            return
+        if self.openid_inicio is not None and time.monotonic() - self.openid_inicio > 60:
+            self._encerrar_aguarde_openid(timeout=True)
+            return
+        # Sem injetar scripts e sem postMessage: a detecção é feita
+        # exclusivamente em NavigationStarting pelo controle WebView2.
+
+    def instalar(self, navegador):
+        if self.area is not None:
+            return
+        import System.Windows.Forms as Forms
+        from System.Drawing import Color
+        self.principal = navegador
+        self.form = navegador.form
+
+        # Layout com linhas independentes: a barra ocupa 39px exclusivos.
+        # O WebView2 fica apenas na segunda linha e nao encobre o cabecalho.
+        self.layout = Forms.TableLayoutPanel()
+        self.layout.Dock = Forms.DockStyle.Fill
+        self.layout.ColumnCount = 1
+        self.layout.RowCount = 2
+        self.layout.Margin = Forms.Padding(0)
+        self.layout.Padding = Forms.Padding(0)
+        self.layout.ColumnStyles.Add(Forms.ColumnStyle(Forms.SizeType.Percent, 100.0))
+        self.layout.RowStyles.Add(Forms.RowStyle(Forms.SizeType.Absolute, 39.0))
+        self.layout.RowStyles.Add(Forms.RowStyle(Forms.SizeType.Percent, 100.0))
+        self.area = Forms.Panel()
+        self.area.Dock = Forms.DockStyle.Fill
+        self.area.Margin = Forms.Padding(0)
+        self.area.BackColor = Color.FromArgb(248, 248, 248)
+        self.barra = Forms.FlowLayoutPanel()
+        self.barra.Dock = Forms.DockStyle.Fill
+        self.barra.Margin = Forms.Padding(0)
+        self.barra.Height = 39
+        self.barra.WrapContents = False
+        self.barra.AutoScroll = True
+        self.barra.BackColor = Color.FromArgb(24, 59, 89)
+        self.botoes = Forms.FlowLayoutPanel()
+        self.botoes.AutoSize = True
+        self.botoes.WrapContents = False
+        self.botoes.Margin = Forms.Padding(0)
+
+        novo = Forms.Button()
+        novo.Text = '+'
+        novo.Width = 40
+        novo.Height = 29
+        novo.Margin = Forms.Padding(5, 4, 2, 2)
+        novo.BackColor = Color.LimeGreen
+        novo.Click += self._clicar_nova
+        fechar = Forms.Button()
+        fechar.Text = 'Fechar guia'
+        fechar.Width = 105
+        fechar.Height = 29
+        fechar.Margin = Forms.Padding(3, 4, 8, 2)
+        fechar.Click += self._clicar_fechar
+        self._handlers.extend([self._clicar_nova, self._clicar_fechar])
+        self.barra.Controls.Add(novo)
+        self.barra.Controls.Add(fechar)
+        self.barra.Controls.Add(self.botoes)
+
+        navegador.webview.Dock = Forms.DockStyle.Fill
+        self.form.Controls.Remove(navegador.webview)
+        self.area.Controls.Add(navegador.webview)
+        self.layout.Controls.Add(self.barra, 0, 0)
+        self.layout.Controls.Add(self.area, 0, 1)
+        self.form.Controls.Add(self.layout)
+        self.layout.BringToFront()
+        self.guias.append({'browser': navegador.webview, 'botao': None, 'numero': 1})
+        self._criar_botao(0)
+        self.selecionar(0)
+        if self.openid_aguarde_ativo:
+            self._instalar_aguarde_openid()
+        # A navegacao principal ainda admite redirecionamentos de login OIDC.
+        navegador.webview.CoreWebView2.NavigationStarting += self._navegacao_principal
+        self._handlers.append(self._navegacao_principal)
+        if self.openid_aguarde_ativo:
+            navegador.webview.CoreWebView2.NavigationStarting += self._navegacao_login_openid
+            self._handlers.append(self._navegacao_login_openid)
+
+    def _navegacao_principal(self, sender, args):
+        """Abre links externos do AppSheet em guia, sem bloquear login SSO."""
+        from urllib.parse import urlsplit
+        try:
+            origem = (urlsplit(str(sender.Source or '')).hostname or '').lower()
+            destino_url = str(args.Uri or '')
+            destino = (urlsplit(destino_url).hostname or '').lower()
+            if not (origem == 'appsheet.com' or origem.endswith('.appsheet.com')):
+                return
+            if destino == 'appsheet.com' or destino.endswith('.appsheet.com'):
+                return
+            if destino in ('accounts.google.com', 'auth.lhftech.com.br',
+                           'login.live.com', 'login.microsoft.com') or (
+                destino.endswith('.microsoftonline.com')
+            ):
+                return
+            if urlsplit(destino_url).scheme not in ('http', 'https'):
+                return
+            args.Cancel = True
+            self.abrir(destino_url)
+        except Exception as exc:
+            print('FTECH: falha ao tratar link:', exc)
+
+    def _criar_botao(self, indice):
+        import System.Windows.Forms as Forms
+        entrada = self.guias[indice]
+        botao = Forms.Button()
+        botao.Text = 'Principal' if indice == 0 else f'Guia {entrada["numero"]}'
+        botao.Width = 100
+        botao.Height = 29
+        botao.Margin = Forms.Padding(2, 4, 2, 2)
+        botao.FlatStyle = Forms.FlatStyle.Flat
+
+        def clicar(sender, args):
+            try:
+                self.selecionar_entrada(entrada)
+            except Exception as exc:
+                print('FTECH: falha ao selecionar guia:', exc)
+
+        botao.Click += clicar
+        self._handlers.append(clicar)
+        entrada['botao'] = botao
+        self.botoes.Controls.Add(botao)
+
+    def selecionar_entrada(self, entrada):
+        if entrada in self.guias:
+            self.selecionar(self.guias.index(entrada))
+
+    def selecionar(self, indice):
+        from System.Drawing import Color
+        if indice < 0 or indice >= len(self.guias):
+            return False
+        self.ativa = indice
+        for i, entrada in enumerate(self.guias):
+            browser = entrada['browser']
+            browser.Visible = (i == indice)
+            botao = entrada['botao']
+            botao.BackColor = Color.White if i == indice else Color.FromArgb(190, 204, 217)
+        self.guias[indice]['browser'].BringToFront()
+        if self.openid_aguarde_ativo and self.openid_painel is not None:
+            self.openid_painel.BringToFront()
+        return True
+
+    def _clicar_nova(self, sender, args):
+        self.abrir(self.url_principal)
+
+    def _clicar_fechar(self, sender, args):
+        # Nunca fecha o WebView2 principal do pywebview.
+        if self.ativa == 0 or self.ativa >= len(self.guias):
+            return
+        indice = self.ativa
+        entrada = self.guias[indice]
+        self.selecionar(indice - 1)
+        self.guias.pop(indice)
+        self.botoes.Controls.Remove(entrada['botao'])
+        self.area.Controls.Remove(entrada['browser'])
+        entrada['browser'].Dispose()
+        entrada['botao'].Dispose()
+
+    def abrir(self, url):
+        from urllib.parse import urlsplit
+        url = str(url or '').strip()
+        if urlsplit(url).scheme not in ('https', 'http') or not urlsplit(url).netloc:
+            return False
+        if self.form is None or self.form.IsDisposed or self.area is None:
+            return False
+        if self.form.InvokeRequired:
+            from System import Action
+            self.form.BeginInvoke(Action(lambda: self._abrir_ui(url)))
+        else:
+            self._abrir_ui(url)
+        return True
+
+    def _abrir_ui(self, url):
+        from Microsoft.Web.WebView2.WinForms import WebView2
+        import System.Windows.Forms as Forms
+        if self.form is None or self.form.IsDisposed:
+            return
+        self._numero += 1
+        browser = WebView2()
+        browser.Dock = Forms.DockStyle.Fill
+        browser.DefaultBackgroundColor = __import__('System').Drawing.Color.White
+        entrada = {'browser': browser, 'botao': None, 'numero': self._numero}
+        self.guias.append(entrada)
+        self.area.Controls.Add(browser)
+        self._criar_botao(len(self.guias) - 1)
+        self.selecionar(len(self.guias) - 1)
+
+        def quando_pronto(sender, args):
+            try:
+                if not args.IsSuccess:
+                    print('FTECH: erro ao inicializar guia WebView2:', args.InitializationException)
+                    return
+                core = sender.CoreWebView2
+                core.NewWindowRequested += nova_janela
+                core.NavigationCompleted += pagina_carregada
+                core.Settings.IsStatusBarEnabled = False
+                core.Navigate(url)
+            except Exception as exc:
+                print('FTECH: erro de navegacao da nova guia:', exc)
+
+        def pagina_carregada(sender, args):
+            # Cada WebView2 secundario nao tem events.loaded do pywebview.
+            # Executa os mesmos scripts de zoom e tema da guia principal.
+            try:
+                from urllib.parse import urlsplit
+                host = (urlsplit(str(sender.Source or '')).hostname or '').lower()
+                if host == 'appsheet.com' or host.endswith('.appsheet.com'):
+                    sender.ExecuteScriptAsync(self.zoom_js)
+                    sender.ExecuteScriptAsync(self.theme_js)
+                    if getattr(self, 'openid_provedor_js', None):
+                        sender.ExecuteScriptAsync(self.openid_provedor_js)
+                        sender.ExecuteScriptAsync(self.openid_consentimento_js)
+                elif host == 'auth.lhftech.com.br' and getattr(self, 'openid_login_js', None):
+                    sender.ExecuteScriptAsync(self.openid_login_js)
+            except Exception as exc:
+                print('FTECH: erro ao instalar controles da guia:', exc)
+
+        def nova_janela(sender, args):
+            args.Handled = True
+            self.abrir(str(args.Uri or ''))
+
+        self._handlers.extend([quando_pronto, pagina_carregada, nova_janela])
+        browser.CoreWebView2InitializationCompleted += quando_pronto
+        try:
+            browser.EnsureCoreWebView2Async(self.principal.webview.CoreWebView2.Environment)
+        except Exception as exc:
+            print('FTECH: falha ao iniciar WebView2:', exc)
+
+def habilitar_guias_nativas_webview2(gerenciador):
+    try:
+        from webview.platforms import edgechromium
+        classe = edgechromium.EdgeChrome
+        anterior = classe.on_webview_ready
+        def pronto(self, sender, args):
+            anterior(self, sender, args)
+            if args.IsSuccess and gerenciador.area is None:
+                try:
+                    gerenciador.instalar(self)
+                except Exception as erro:
+                    print('Erro ao instalar guias nativas:', erro)
+        def popup(self, sender, args):
+            # Trata sincronamente o evento WebView2: não destrói o contexto JS.
+            args.Handled = True
+            gerenciador.abrir(str(args.Uri or ''))
+        classe.on_webview_ready = pronto
+        classe.on_new_window_request = popup
+        return True
+    except Exception as erro:
+        print('Falha ao preparar guias:', erro)
+        return False
+
+
 def habilitar_autofill_senhas_webview2():
     """
     Habilita o preenchimento geral e o salvamento de senhas no WebView2.
@@ -1811,11 +2321,20 @@ def open_appsheet(user):
         js_api=preferencias,
     )
 
+    gerenciador_guias = GuiasNativasFTECH(appsheet_url, zoom_js, theme_js)
+    gerenciador_guias.openid_aguarde_ativo = provider in ("OPENID", "OIDC", "OPENID CONNECT")
+
     provider_js = criar_javascript_provedor(provider)
     email_js = criar_javascript_email(email_appsheet, provider)
     senha_js = criar_javascript_senha(appsheet_senha, provider)
     microsoft_continuar_js = criar_javascript_microsoft_continuar_conectado()
+    openid_js = criar_javascript_login_openid(email_appsheet, appsheet_senha)
+    openid_consentimento_js = criar_javascript_consentimento_openid()
     aguarde_js = criar_javascript_tela_aguarde()
+    if provider in ("OPENID", "OIDC", "OPENID CONNECT"):
+        gerenciador_guias.openid_provedor_js = provider_js
+        gerenciador_guias.openid_login_js = openid_js
+        gerenciador_guias.openid_consentimento_js = openid_consentimento_js
 
     def configurar_janela(janela):
         def on_loaded():
@@ -1837,9 +2356,23 @@ def open_appsheet(user):
                     # Na tela de escolha, seleciona automaticamente o provedor.
                     try:
                         janela.evaluate_js(provider_js)
-                        janela.evaluate_js(aguarde_js)
+                        if provider in ("OPENID", "OIDC", "OPENID CONNECT"):
+                            janela.evaluate_js(openid_consentimento_js)
+                        else:
+                            janela.evaluate_js(aguarde_js)
                     except Exception as error:
                         print(f"Erro ao selecionar provedor: {error}")
+
+                # Keycloak: o formulário está no domínio do provedor externo.
+                # Nunca aplica o overlay azul: permite ver erros/2FA do login.
+                if provider in ("OPENID", "OIDC", "OPENID CONNECT") and (
+                    "auth.lhftech.com.br" in current_url
+                ):
+                    gerenciador_guias.openid_visitou_keycloak = True
+                    try:
+                        janela.evaluate_js(openid_js)
+                    except Exception as error:
+                        print(f"Erro ao preencher login OpenID: {error}")
 
                 # Google: tenta preencher e-mail e senha automaticamente usando
                 # os campos normais da página. A tela de aguarde possui timeout;
@@ -1888,10 +2421,11 @@ def open_appsheet(user):
         )
         configurar_janela(nova_janela)
 
-    preferencias.abrir_nova_janela_callback = abrir_nova_janela
+    preferencias.abrir_nova_janela_callback = lambda: gerenciador_guias.abrir(appsheet_url)
 
     # Ativa o gerenciador de senhas nativo do WebView2 antes da inicialização.
     habilitar_autofill_senhas_webview2()
+    habilitar_guias_nativas_webview2(gerenciador_guias)
 
     webview.start(
         gui="edgechromium",
@@ -1913,3 +2447,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

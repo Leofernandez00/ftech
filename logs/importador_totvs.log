@@ -1,0 +1,31 @@
+2026-10-08 09:53:44,015 INFO Importador TOTVS iniciado; servidor=188.220.168.222, banco=FTECH
+2026-10-08 09:53:45,085 INFO Iniciando ciclo de importação automático
+2026-10-08 09:53:50,508 INFO CLIENTES_TOTVS sem alterações - tabela SQL contém 0 registros; última carga: 07/10/2026 13:50:50
+2026-10-08 09:53:55,698 INFO FORNECEDORES_TOTVS sem alterações - tabela SQL contém 16349 registros; última carga: 07/10/2026 13:51:08
+2026-10-08 09:54:01,357 INFO PRODUTO_TOTVS sem alterações - tabela SQL contém 225698 registros; última carga: 08/10/2026 09:07:40
+2026-10-08 09:54:01,383 INFO Ciclo de importação finalizado
+2026-10-08 09:55:45,087 INFO Iniciando ciclo de importação automático
+2026-10-08 09:55:50,452 INFO CLIENTES_TOTVS sem alterações - tabela SQL contém 0 registros; última carga: 07/10/2026 13:50:50
+2026-10-08 09:55:55,653 INFO FORNECEDORES_TOTVS sem alterações - tabela SQL contém 16349 registros; última carga: 07/10/2026 13:51:08
+2026-10-08 09:56:01,315 INFO PRODUTO_TOTVS sem alterações - tabela SQL contém 225698 registros; última carga: 08/10/2026 09:07:40
+2026-10-08 09:56:01,342 INFO Ciclo de importação finalizado
+2026-10-08 09:58:35,708 INFO Importador TOTVS iniciado; servidor=188.220.168.222, banco=FTECH
+2026-10-08 09:58:36,762 INFO Iniciando ciclo de importação automático
+2026-10-08 09:58:42,256 INFO CLIENTES_TOTVS: primeira carga desta versão ou arquivo alterado. Será feita substituição completa.
+2026-10-08 09:58:57,556 INFO CLIENTES_TOTVS: substituindo carga. Registros atuais=0, registros novos=45336
+2026-10-08 09:58:57,574 INFO CLIENTES_TOTVS: DELETE concluído - 0 registros antigos removidos. Iniciando gravação da planilha atual.
+2026-10-08 09:58:58,705 INFO CLIENTES_TOTVS substituída com sucesso: removidos=0, gravados=45336, ignorados=0
+2026-10-08 09:59:04,010 INFO FORNECEDORES_TOTVS: primeira carga desta versão ou arquivo alterado. Será feita substituição completa.
+2026-10-08 09:59:10,525 INFO FORNECEDORES_TOTVS: substituindo carga. Registros atuais=16349, registros novos=16349
+2026-10-08 09:59:11,076 INFO FORNECEDORES_TOTVS: DELETE concluído - 16349 registros antigos removidos. Iniciando gravação da planilha atual.
+2026-10-08 09:59:13,154 INFO FORNECEDORES_TOTVS substituída com sucesso: removidos=16349, gravados=16349, ignorados=0
+2026-10-08 09:59:18,902 INFO PRODUTO_TOTVS: primeira carga desta versão ou arquivo alterado. Será feita substituição completa.
+2026-10-08 10:00:14,759 INFO PRODUTO_TOTVS: substituindo carga. Registros atuais=225698, registros novos=225698
+2026-10-08 10:00:16,367 INFO PRODUTO_TOTVS: DELETE concluído - 225698 registros antigos removidos. Iniciando gravação da planilha atual.
+2026-10-08 10:00:19,175 INFO PRODUTO_TOTVS substituída com sucesso: removidos=225698, gravados=225698, ignorados=0
+2026-10-08 10:00:19,269 INFO Ciclo de importação finalizado
+2026-10-08 10:00:36,774 INFO Iniciando ciclo de importação automático
+2026-10-08 10:00:42,143 INFO CLIENTES_TOTVS sem alterações - tabela SQL contém 45336 registros; última carga completa: 08/10/2026 09:58:59
+2026-10-08 10:00:47,423 INFO FORNECEDORES_TOTVS sem alterações - tabela SQL contém 16349 registros; última carga completa: 08/10/2026 09:59:13
+2026-10-08 10:00:53,179 INFO PRODUTO_TOTVS sem alterações - tabela SQL contém 225698 registros; última carga completa: 08/10/2026 10:00:19
+2026-10-08 10:00:53,211 INFO Ciclo de importação finalizado
