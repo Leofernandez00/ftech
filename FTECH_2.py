@@ -20,12 +20,19 @@ from packaging.version import Version, InvalidVersion
 from PIL import Image, ImageTk
 
 APP_NAME = "FTECH App"
-APP_VERSION = os.getenv("APP_VERSION", "2.0.17").strip()
+APP_VERSION = os.getenv("APP_VERSION", "2.0.18").strip()
 SQL_SERVER = "188.220.168.222"
 SQL_DATABASE = "FTECH"
 SQL_USER = "ftech"
 SQL_PASSWORD = "ftech@1975"
 SQL_DRIVER = "ODBC Driver 17 for SQL Server"
+
+# O instalador oficial x64 do Microsoft ODBC Driver 17 deve ficar na mesma
+# pasta deste .py com este nome antes da compilação. No EXE --onefile ele será
+# incorporado com --add-data e extraído automaticamente pelo PyInstaller.
+ODBC_INSTALLER_FILE = "msodbcsql17.msi"
+ODBC_INSTALL_TIMEOUT = 180
+
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "300"))
 MAX_TENTATIVAS = 5
 
@@ -244,6 +251,131 @@ def resource_path(relative_path):
     """Retorna o caminho correto no Python e no EXE criado pelo PyInstaller."""
     base_path = getattr(sys, "_MEIPASS", get_application_directory())
     return os.path.join(base_path, relative_path)
+
+
+def odbc_driver_17_instalado():
+    """Retorna True quando o Microsoft ODBC Driver 17 está registrado no Windows."""
+    try:
+        esperado = SQL_DRIVER.strip().casefold()
+        return any(str(driver).strip().casefold() == esperado for driver in pyodbc.drivers())
+    except Exception:
+        return False
+
+
+def instalar_odbc_driver_17():
+    """
+    Instala silenciosamente o ODBC Driver 17 incluído no EXE.
+
+    A instalação é executada pelo msiexec com elevação UAC. O usuário pode ver
+    apenas a confirmação do Controle de Conta de Usuário do Windows na primeira
+    execução da máquina. Depois de instalado, esta rotina não é executada novamente.
+    """
+    if os.name != "nt":
+        raise RuntimeError("A instalação automática do ODBC Driver 17 é suportada apenas no Windows.")
+
+    if odbc_driver_17_instalado():
+        return True
+
+    installer_path = resource_path(ODBC_INSTALLER_FILE)
+    if not os.path.isfile(installer_path):
+        raise FileNotFoundError(
+            "O Microsoft ODBC Driver 17 não está instalado e o instalador incorporado "
+            f"não foi encontrado ({ODBC_INSTALLER_FILE}).\n\n"
+            "Antes de gerar o EXE, coloque o arquivo msodbcsql17.msi na pasta do projeto "
+            "e inclua-o no PyInstaller com --add-data."
+        )
+
+    # O Start-Process com -Verb RunAs solicita elevação apenas para o msiexec.
+    # O caminho é passado como argumento entre aspas para funcionar mesmo em pastas
+    # que contenham espaços.
+    caminho_ps = installer_path.replace("'", "''")
+    argumentos_msi = (
+        f'/i "{installer_path}" /qn /norestart '
+        'IACCEPTMSODBCSQLLICENSETERMS=YES'
+    ).replace("'", "''")
+
+    comando_ps = (
+        "$ErrorActionPreference = 'Stop'; "
+        f"$argsMsi = '{argumentos_msi}'; "
+        "$p = Start-Process -FilePath \"$env:SystemRoot\\System32\\msiexec.exe\" "
+        "-Verb RunAs -ArgumentList $argsMsi -Wait -PassThru; "
+        "exit $p.ExitCode"
+    )
+
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+    try:
+        processo = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                comando_ps,
+            ],
+            creationflags=flags,
+            timeout=ODBC_INSTALL_TIMEOUT,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError(
+            "A instalação do ODBC Driver 17 excedeu o tempo limite."
+        ) from error
+
+    # 0 = sucesso. 3010 = sucesso, com reinicialização recomendada pelo Windows Installer.
+    if processo.returncode not in (0, 3010):
+        raise RuntimeError(
+            "Não foi possível instalar automaticamente o Microsoft ODBC Driver 17.\n\n"
+            f"Código retornado pelo instalador: {processo.returncode}\n\n"
+            "Verifique se a solicitação de administrador (UAC) foi aceita."
+        )
+
+    # O registro do driver normalmente aparece imediatamente. Aguarda alguns segundos
+    # para cobrir máquinas mais lentas antes de iniciar as conexões SQL do FTECH.
+    limite = time.time() + 20
+    while time.time() < limite:
+        if odbc_driver_17_instalado():
+            return True
+        time.sleep(1)
+
+    if processo.returncode == 3010:
+        raise RuntimeError(
+            "O ODBC Driver 17 foi instalado, mas o Windows informou que é necessário "
+            "reiniciar o computador antes de utilizá-lo. Reinicie a máquina e abra o FTECH novamente."
+        )
+
+    raise RuntimeError(
+        "A instalação do ODBC Driver 17 terminou, porém o driver ainda não foi localizado pelo sistema."
+    )
+
+
+def garantir_odbc_driver_17():
+    """Garante a presença do driver antes de qualquer acesso ao SQL Server."""
+    if odbc_driver_17_instalado():
+        return True
+
+    try:
+        return instalar_odbc_driver_17()
+    except Exception as error:
+        root = None
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showerror(
+                "FTECH | ODBC Driver 17",
+                "O FTECH precisa do Microsoft ODBC Driver 17 for SQL Server para se conectar ao servidor.\n\n"
+                f"{error}",
+                parent=root,
+            )
+        finally:
+            if root is not None:
+                try:
+                    root.destroy()
+                except Exception:
+                    pass
+        return False
 
 
 def center_window(window, width, height):
@@ -2435,6 +2567,11 @@ def open_appsheet(user):
     )
 
 def main():
+    # Precisa ser a primeira verificação, pois tanto a atualização quanto o login
+    # consultam o SQL Server. Se o driver não existir, ele é instalado silenciosamente.
+    if not garantir_odbc_driver_17():
+        sys.exit(1)
+
     if verify_and_install_update():
         sys.exit(0)
 
